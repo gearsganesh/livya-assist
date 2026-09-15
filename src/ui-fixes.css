@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 html,body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .brand{justify-content:flex-start;align-items:center}
-.brand>b{background-image:url('https://raw.githubusercontent.com/gearsganesh/Livya-Hims/main/LIVYA_HIMS/frontend/livya-mark.png')!important;background-repeat:no-repeat!important;background-position:center!important;background-size:78%!important;color:transparent!important;font-size:0!important}
+.brand>b{background-image:url('https://raw.githubusercontent.com/gearsganesh/Livya-Hims/main/LIVYA_HIMS/frontend/livya-logo-cropped.png')!important;background-repeat:no-repeat!important;background-position:center!important;background-size:contain!important;color:transparent!important;font-size:0!important}
 .head h1{font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.02em}
 .head p{font-size:12px;line-height:1.45}
 .panel h2{font-weight:700;line-height:1.25}
