@@ -1,0 +1,23 @@
+/* LIVYA visual refinement layer */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+html,body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.brand{justify-content:flex-start;align-items:center}
+.brand>b{background-image:url('https://raw.githubusercontent.com/gearsganesh/Livya-Hims/main/LIVYA_HIMS/frontend/livya-mark.png')!important;background-repeat:no-repeat!important;background-position:center!important;background-size:78%!important;color:transparent!important;font-size:0!important}
+.head h1{font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.02em}
+.head p{font-size:12px;line-height:1.45}
+.panel h2{font-weight:700;line-height:1.25}
+button,input,select,textarea{line-height:1.35}
+.primary,.head .primary{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;line-height:1;white-space:nowrap}
+.head>div:last-child{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.toolbar{align-items:center;justify-content:flex-start}
+.toolbar input,.toolbar select,.head select{height:40px;min-height:40px}
+.toolbar>button,.modebar button,td button{display:inline-flex;align-items:center;justify-content:center;min-height:34px;line-height:1}
+td:last-child{min-width:150px}td:last-child button{vertical-align:middle}
+.dialog{width:min(760px,100%)}
+.formgrid{align-items:start}
+.dialog input,.dialog select{min-height:40px;height:40px}
+.modal-actions{align-items:center;justify-content:flex-end}
+.authcard .brand{align-items:center}
+.authcard .brand>b{width:60px;height:60px;flex-basis:60px}
+.empty{min-height:90px;display:flex;align-items:center;justify-content:center}
+@media(max-width:760px){.head>div:last-child{justify-content:flex-start}.toolbar{width:100%}.toolbar input{flex:1 1 100%;width:100%}.toolbar select,.toolbar>button{flex:0 0 auto}.dialog{max-height:92vh}}
