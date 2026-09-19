@@ -4,10 +4,10 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const ROLES = ['Super admin','Coordinator','Finance','Center admin','Viewer'];
 
-function respond(body: unknown, status = 200) {
+function respond(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    ...init,
+    headers: { ...corsHeaders, ...(init.headers || {}), 'Content-Type': 'application/json' }
   });
 }
 
