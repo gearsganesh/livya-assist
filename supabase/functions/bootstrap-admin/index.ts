@@ -2,10 +2,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-function respond(body: unknown, status = 200) {
+function respond(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    ...init,
+    headers: { ...corsHeaders, ...(init.headers || {}), 'Content-Type': 'application/json' }
   });
 }
 
