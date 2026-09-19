@@ -21,11 +21,12 @@ Deno.serve(async (req) => {
     if (!url || !key) return Response.json({error:'Server configuration is incomplete'},{status:500});
     if (!token) return Response.json({error:'Unauthorized'},{status:401});
 
+    const callerClient = createClient(url, Deno.env.get('SUPABASE_ANON_KEY') || '', { auth:{persistSession:false,autoRefreshToken:false}, global:{headers:{Authorization:`Bearer ${token}`}} });
     const admin = createClient(url, key, { auth:{persistSession:false,autoRefreshToken:false} });
-    const {data:{user:caller},error:callerError}=await admin.auth.getUser(token);
+    const {data:{user:caller},error:callerError}=await callerClient.auth.getUser(token);
     if(callerError||!caller) return Response.json({error:'Unauthorized'},{status:401});
 
-    const {data:staff,error:staffError}=await admin.from('ops_staff')
+    const {data:staff,error:staffError}=await callerClient.from('ops_staff')
       .select('role,active').eq('id',caller.id).maybeSingle();
     if(staffError) throw staffError;
     if(!staff?.active||staff.role!=='Super admin') return Response.json({error:'Forbidden'},{status:403});
