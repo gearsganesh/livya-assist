@@ -23,7 +23,8 @@ Deno.serve(async (req) => {
     if (!url || !key) return Response.json({error:'Server configuration is incomplete'},{status:500});
     if (!token) return Response.json({error:'Unauthorized'},{status:401});
 
-    const callerClient = createClient(url, key, { auth: { persistSession:false, autoRefreshToken:false } });
+    const callerClient = createClient(url, Deno.env.get('SUPABASE_ANON_KEY') || '', { auth: { persistSession:false, autoRefreshToken:false }, global:{headers:{Authorization:`Bearer ${token}`}} });
+    const admin = createClient(url, key, { auth:{persistSession:false,autoRefreshToken:false} });
     const { data:{ user: caller }, error: callerError } = await callerClient.auth.getUser(token);
     if (callerError || !caller) return Response.json({error:'Unauthorized'},{status:401});
 
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
       if (!center) return Response.json({error:'Invalid or inactive center scope'},{status:400});
     }
 
-    const { data, error:createError } = await callerClient.auth.admin.createUser({
+    const { data, error:createError } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm:true,
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
     });
     if (createError) throw createError;
 
-    const { error:staffError2 } = await callerClient.from('ops_staff').insert({
+    const { error:staffError2 } = await admin.from('ops_staff').insert({
       id:data.user.id,
       full_name,
       email,
@@ -65,7 +66,7 @@ Deno.serve(async (req) => {
       active:true
     });
     if (staffError2) {
-      await callerClient.auth.admin.deleteUser(data.user.id);
+      await admin.auth.admin.deleteUser(data.user.id);
       throw staffError2;
     }
     return Response.json({id:data.user.id});
