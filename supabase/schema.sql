@@ -12,6 +12,7 @@ create table if not exists public.ops_centers (
 create table if not exists public.ops_staff (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
+  email text,
   role text not null check(role in ('Super admin','Coordinator','Finance','Center admin','Viewer')),
   scope text not null default 'All centers',
   active boolean not null default true,
@@ -34,6 +35,7 @@ create table if not exists public.ops_patients (
   referred_by text,
   emergency_contact text,
   app_user_id uuid references auth.users(id) on delete set null,
+  portal_enabled boolean not null default false,
   notes text,
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -257,6 +259,22 @@ create policy "staff insert ops_billing" on ops_billing for insert with check(op
 create policy "staff update ops_billing" on ops_billing for update using(ops_is_staff() and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id)))) with check(ops_is_staff() and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
 create policy "admins delete ops_billing" on ops_billing for delete using(ops_is_admin() and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
 
+-- Patients can read their own operational records through the portal.
+drop policy if exists "patient read own cases" on ops_cases;
+create policy "patient read own cases" on ops_cases for select using(exists(select 1 from ops_patients p where p.id=patient_id and p.app_user_id=auth.uid() and p.portal_enabled=true));
+
+drop policy if exists "patient read own appointments" on ops_appointments;
+create policy "patient read own appointments" on ops_appointments for select using(exists(select 1 from ops_patients p where p.id=patient_id and p.app_user_id=auth.uid() and p.portal_enabled=true));
+
+drop policy if exists "patient read own concierge" on ops_concierge;
+create policy "patient read own concierge" on ops_concierge for select using(exists(select 1 from ops_patients p where p.id=patient_id and p.app_user_id=auth.uid() and p.portal_enabled=true));
+
+drop policy if exists "patient read own billing" on ops_billing;
+create policy "patient read own billing" on ops_billing for select using(exists(select 1 from ops_patients p where p.id=patient_id and p.app_user_id=auth.uid() and p.portal_enabled=true));
+
+-- Keep Auth email synchronized in the operational directory.
+create unique index if not exists ops_patients_app_user_id_uidx on ops_patients(app_user_id) where app_user_id is not null;
+
 -- Hospital and referral directories are shared reference data.
 drop policy if exists "staff read ops_hospitals" on ops_hospitals;
 drop policy if exists "staff insert ops_hospitals" on ops_hospitals;
@@ -275,6 +293,9 @@ create policy "staff read ops_referrers" on ops_referrers for select using(ops_i
 create policy "staff insert ops_referrers" on ops_referrers for insert with check(ops_is_staff());
 create policy "staff update ops_referrers" on ops_referrers for update using(ops_is_staff()) with check(ops_is_staff());
 create policy "admins delete ops_referrers" on ops_referrers for delete using(ops_is_admin());
+
+-- Backfill staff email where Auth users already exist.
+update ops_staff s set email=u.email from auth.users u where u.id=s.id and (s.email is null or s.email='');
 
 insert into ops_centers(name,city) values
 ('LIVYA Dubai (Master Center)','Dubai'),
