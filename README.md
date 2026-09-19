@@ -33,9 +33,9 @@ The browser is no longer the operational database. Patients, cases, appointments
 5. Configure Vercel environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_PUBLISHABLE_KEY`
-6. Never put a Supabase secret/service-role key in browser code. Supabase publishable keys are intended for browser applications when RLS protects the database. citeturn2search11turn3search0
+6. Never put a Supabase secret/service-role key in browser code. Supabase publishable keys are intended for browser applications when RLS protects the database.
 
-The bootstrap Edge Function is intentionally public at the platform layer and performs its own one-time empty-database check. Its JWT verification is disabled in `supabase/config.toml`, which is required for a signed-out browser to call it. citeturn2search0turn2search1
+The bootstrap Edge Function is intentionally public at the platform layer and performs its own one-time empty-database check. Its JWT verification is disabled in `supabase/config.toml`, which is required for a signed-out browser to call it.
 
 ## Security model
 - Super Admin: all centers and staff administration.
@@ -49,4 +49,4 @@ The bootstrap Edge Function is intentionally public at the platform layer and pe
 Connect `gearsganesh/livya-assist` to Vercel and set the two `VITE_SUPABASE_*` variables. The repository contains Vite SPA routing and a Vercel rewrite so direct application routes resolve correctly.
 
 ## Important
-Do not commit real patient data, passwords, Supabase secret keys, or `.env` files. The publishable key may be bundled into browser code, but authorization still comes from Supabase Auth and RLS. citeturn2search11
+Do not commit real patient data, passwords, Supabase secret keys, or `.env` files. The publishable key may be bundled into browser code, but authorization still comes from Supabase Auth and RLS.
