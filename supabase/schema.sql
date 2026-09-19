@@ -197,6 +197,9 @@ drop policy if exists "admins write centers" on ops_centers;
 create policy "staff read centers" on ops_centers for select using(ops_is_staff());
 create policy "super admins write centers" on ops_centers for all using(ops_is_super_admin()) with check(ops_is_super_admin());
 
+drop policy if exists "patient read own center" on ops_centers;
+create policy "patient read own center" on ops_centers for select using(exists(select 1 from ops_patients p where p.center_id=ops_centers.id and p.app_user_id=auth.uid() and p.portal_enabled=true));
+
 -- Staff can see themselves; Super Admins can manage the full staff directory.
 drop policy if exists "staff read staff" on ops_staff;
 drop policy if exists "admins write staff" on ops_staff;
