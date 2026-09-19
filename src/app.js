@@ -1,4 +1,6 @@
-const KEY='livya_ops_local_v4', SESSION='livya_ops_session_v4';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(import.meta.env.VITE_SUPABASE_URL || 'https://maewvwdjxdlcbwsrshlp.supabase.co', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable__edgISlScMx7zmDT1wGVpA_1N788YwM');
 const STAGES=['ENQUIRY','ASSESSMENT','QUOTATION','ACCEPTED','TRAVEL PLANNED','IN TREATMENT','DISCHARGED','FOLLOW UP'];
 const NAV=['Dashboard','Cases','Patients','Concierge','Tasks','Billing','Hospitals','Referral network','Team & Centers'];
 const ROLES=['Super admin','Coordinator','Finance','Center admin','Viewer'];
