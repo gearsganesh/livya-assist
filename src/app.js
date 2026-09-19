@@ -21,6 +21,7 @@ const patient=id=>D.patients.find(x=>x.id===id)?.full_name||'Unknown patient';
 const center=id=>D.centers.find(x=>x.id===id)?.name||'';
 function Sel(label,id,a,v='',fn=x=>x){return '<label>'+label+'<select id="'+id+'">'+a.map(x=>'<option value="'+esc(fn(x).value||fn(x))+'" '+((fn(x).value||fn(x))===v?'selected':'')+'>'+esc(fn(x).label||fn(x).value||fn(x))+'</option>').join('')+'</select></label>'}
 function F(label,id,type='text',v=''){return '<label>'+label+'<input id="'+id+'" type="'+type+'" value="'+esc(v)+'"></label>'}
+function closeModal(){document.querySelector('.modal')?.remove()}
 function modal(title,form,save){$('app').insertAdjacentHTML('beforeend','<div class="modal"><div class="dialog"><button class="close" onclick="closeModal()">×</button><h2>'+esc(title)+'</h2>'+form+'<div class="modal-actions"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="run(()=>'+save+')">Save</button></div></div></div>')}
 async function saveRow(table,id,data){const q=id?supabase.from(table).update(data).eq('id',id):supabase.from(table).insert(data);const r=await q;if(r.error)throw r.error;closeModal();await load();toast('Saved')}
 async function delRow(table,id){if(!confirm('Delete this record?'))return;const r=await supabase.from(table).delete().eq('id',id);if(r.error)throw r.error;await load();toast('Deleted')}
