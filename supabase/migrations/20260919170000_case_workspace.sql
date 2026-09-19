@@ -71,3 +71,124 @@ create policy "patients read itineraries" on public.ops_itineraries for select u
 create policy "patients read visible messages" on public.ops_case_messages for select using(visible_to_patient and exists(select 1 from public.ops_cases c join public.ops_patients p on p.id=c.patient_id where c.id=case_id and p.app_user_id=auth.uid() and p.portal_enabled=true));
 
 grant select,insert,update,delete on public.ops_case_events,public.ops_documents,public.ops_quotations,public.ops_quotation_items,public.ops_itineraries,public.ops_case_messages to authenticated;
+
+
+-- Production hardening: role-aware writes, Super Admin full CRUD, indexes, timestamps and private document storage.
+create or replace function public.ops_can_write(p_module text)
+returns boolean language sql stable security definer set search_path=public
+as $$
+  select exists(
+    select 1 from public.ops_staff s
+    where s.id=auth.uid() and s.active and (
+      s.role='Super admin'
+      or (p_module in ('cases','patients','appointments','tasks','concierge','documents','quotations','travel','messages') and s.role in ('Coordinator','Center admin'))
+      or (p_module='billing' and s.role='Finance')
+      or (p_module in ('hospitals','referrers','centers') and s.role='Center admin')
+    )
+  );
+$$;
+
+-- Super Admin is the only role allowed to permanently remove operational records.
+drop policy if exists "admins delete ops_patients" on public.ops_patients;
+create policy "super admins delete ops_patients" on public.ops_patients for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_cases" on public.ops_cases;
+create policy "super admins delete ops_cases" on public.ops_cases for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_appointments" on public.ops_appointments;
+create policy "super admins delete ops_appointments" on public.ops_appointments for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_tasks" on public.ops_tasks;
+create policy "super admins delete ops_tasks" on public.ops_tasks for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_concierge" on public.ops_concierge;
+create policy "super admins delete ops_concierge" on public.ops_concierge for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_billing" on public.ops_billing;
+create policy "super admins delete ops_billing" on public.ops_billing for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_hospitals" on public.ops_hospitals;
+create policy "super admins delete ops_hospitals" on public.ops_hospitals for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete ops_referrers" on public.ops_referrers;
+create policy "super admins delete ops_referrers" on public.ops_referrers for delete using(ops_is_super_admin());
+
+-- Centers are already Super Admin-only.
+-- Case workspace destructive actions are Super Admin-only.
+drop policy if exists "admins delete documents" on public.ops_documents;
+create policy "super admins delete documents" on public.ops_documents for delete using(ops_is_super_admin());
+
+drop policy if exists "admins delete quotations" on public.ops_quotations;
+create policy "super admins delete quotations" on public.ops_quotations for delete using(ops_is_super_admin());
+
+-- Quote items, itineraries and messages were previously broadly writable. Keep reads scoped, but restrict mutations.
+drop policy if exists "staff write quote items" on public.ops_quotation_items;
+create policy "staff write quote items" on public.ops_quotation_items for all
+using(ops_is_super_admin() or (ops_can_write('quotations') and exists(select 1 from public.ops_quotations q join public.ops_cases c on c.id=q.case_id where q.id=quotation_id and ops_can_access_center(c.center_id))))
+with check(ops_is_super_admin() or (ops_can_write('quotations') and exists(select 1 from public.ops_quotations q join public.ops_cases c on c.id=q.case_id where q.id=quotation_id and ops_can_access_center(c.center_id))));
+
+drop policy if exists "staff write itineraries" on public.ops_itineraries;
+create policy "staff write itineraries" on public.ops_itineraries for all
+using(ops_is_super_admin() or (ops_can_write('travel') and exists(select 1 from public.ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))))
+with check(ops_is_super_admin() or (ops_can_write('travel') and exists(select 1 from public.ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+
+drop policy if exists "staff write case events" on public.ops_case_events;
+create policy "staff write case events" on public.ops_case_events for insert
+with check(ops_is_super_admin() or (ops_can_write('cases') and exists(select 1 from public.ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+
+drop policy if exists "staff write case messages" on public.ops_case_messages;
+create policy "staff write case messages" on public.ops_case_messages for insert
+with check(ops_is_super_admin() or (ops_can_write('messages') and exists(select 1 from public.ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+drop policy if exists "staff update case messages" on public.ops_case_messages;
+create policy "staff update case messages" on public.ops_case_messages for update
+using(ops_is_super_admin() or (ops_can_write('messages') and exists(select 1 from public.ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))))
+with check(ops_is_super_admin() or (ops_can_write('messages') and exists(select 1 from public.ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+create policy "super admins delete case messages" on public.ops_case_messages for delete using(ops_is_super_admin());
+
+-- Operational indexes.
+create index if not exists ops_patients_center_idx on public.ops_patients(center_id);
+create index if not exists ops_cases_center_status_idx on public.ops_cases(center_id,status);
+create index if not exists ops_cases_patient_idx on public.ops_cases(patient_id);
+create index if not exists ops_cases_coordinator_idx on public.ops_cases(coordinator_id);
+create index if not exists ops_appointments_case_date_idx on public.ops_appointments(case_id,appointment_date);
+create index if not exists ops_appointments_patient_date_idx on public.ops_appointments(patient_id,appointment_date);
+create index if not exists ops_tasks_case_due_idx on public.ops_tasks(case_id,due_date,status);
+create index if not exists ops_tasks_assigned_due_idx on public.ops_tasks(assigned_to,due_date,status);
+create index if not exists ops_concierge_case_idx on public.ops_concierge(case_id);
+create index if not exists ops_billing_case_status_idx on public.ops_billing(case_id,status);
+create index if not exists ops_billing_patient_status_idx on public.ops_billing(patient_id,status);
+create index if not exists ops_hospitals_name_idx on public.ops_hospitals(name);
+create index if not exists ops_referrers_name_idx on public.ops_referrers(name);
+
+-- Consistent updated_at behavior.
+create or replace function public.ops_touch_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at=now();
+  return new;
+end;
+$$;
+do $$
+declare t text;
+begin
+  foreach t in array array['ops_centers','ops_staff','ops_patients','ops_cases','ops_appointments','ops_tasks','ops_concierge','ops_billing']
+  loop
+    execute format('drop trigger if exists %I_updated_at on public.%I',t,t);
+    execute format('create trigger %I_updated_at before update on public.%I for each row execute function public.ops_touch_updated_at()',t,t);
+  end loop;
+end $$;
+
+-- Private bucket for case documents. Files are never public.
+insert into storage.buckets(id,name,public)
+values('case-documents','case-documents',false)
+on conflict(id) do update set public=false;
+
+drop policy if exists "staff read case document files" on storage.objects;
+drop policy if exists "staff upload case document files" on storage.objects;
+drop policy if exists "super admins delete case document files" on storage.objects;
+create policy "staff read case document files" on storage.objects for select
+using(bucket_id='case-documents' and ops_is_staff());
+create policy "staff upload case document files" on storage.objects for insert
+with check(bucket_id='case-documents' and ops_can_write('documents'));
+create policy "super admins delete case document files" on storage.objects for delete
+using(bucket_id='case-documents' and ops_is_super_admin());
