@@ -283,3 +283,8 @@ insert into ops_centers(name,city) values
 ('LIVYA Al Ain','Al Ain'),
 ('LIVYA Manama','Manama')
 on conflict(name) do nothing;
+
+
+-- Data API privileges for browser clients. RLS remains the authorization boundary.
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on public.ops_centers, public.ops_staff, public.ops_patients, public.ops_cases, public.ops_appointments, public.ops_tasks, public.ops_concierge, public.ops_billing, public.ops_hospitals, public.ops_referrers to authenticated;
