@@ -31,6 +31,15 @@ export async function openCaseWorkspace({supabase,caseId,S,esc,money,write}){
     root.appendChild(box);box.querySelector('[data-x]').onclick=()=>box.remove();box.querySelector('[data-s]').onclick=()=>{const v={};fields.forEach(f=>v[f.key]=box.querySelector('[data-f="'+f.key+'"]').value);box.remove();action(()=>fn(v))};
   };
   const add=(table,p)=>supabase.from(table).insert(p).then(r=>{if(r.error)throw r.error});
+  const uploadDocument=async file=>{
+    if(!file)return;
+    const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=caseId+'/'+crypto.randomUUID()+'-'+safe;
+    const up=await supabase.storage.from('case-documents').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
+    if(up.error)throw up.error;
+    const ins=await supabase.from('ops_documents').insert({case_id:caseId,file_name:file.name,mime_type:file.type||null,storage_path:path,uploaded_by:S.user.id});
+    if(ins.error){await supabase.storage.from('case-documents').remove([path]);throw ins.error;}
+  };
   const remove=async(table,id)=>{if(!confirm('Delete this record?'))return;const r=await supabase.from(table).delete().eq('id',id);if(r.error)throw r.error};
   const render=()=>{
     if(!data)return;
@@ -45,7 +54,9 @@ export async function openCaseWorkspace({supabase,caseId,S,esc,money,write}){
     root.querySelector('[data-close]').onclick=close;root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});
     root.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const [kind,id]=b.dataset.del.split(':');const table={event:'ops_case_events',doc:'ops_documents',quote:'ops_quotations',message:'ops_case_messages'}[kind];action(()=>remove(table,id))});
     root.querySelector('[data-a="event"]')?.addEventListener('click',()=>form('Add timeline event',[{key:'event_type',label:'Event type',value:'NOTE'},{key:'message',label:'Message',type:'textarea'}],v=>add('ops_case_events',{case_id:caseId,event_type:v.event_type||'NOTE',message:v.message,actor_id:S.user.id})));
-    root.querySelector('[data-a="doc"]')?.addEventListener('click',()=>form('Register document',[{key:'file_name',label:'File name'},{key:'category',label:'Category',value:'OTHER'},{key:'storage_path',label:'Storage path / URL'}],v=>add('ops_documents',{case_id:caseId,file_name:v.file_name,category:v.category||'OTHER',storage_path:v.storage_path||'',uploaded_by:S.user.id})));
+    root.querySelector('[data-a="doc"]')?.addEventListener('click',()=>{
+      const input=document.createElement('input');input.type='file';input.accept='.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.webp';input.onchange=()=>action(()=>uploadDocument(input.files?.[0]));input.click();
+    });
     root.querySelector('[data-a="quote"]')?.addEventListener('click',()=>form('New quotation',[{key:'reference',label:'Reference'},{key:'amount',label:'Amount',type:'number'},{key:'valid_until',label:'Valid until',type:'date'},{key:'notes',label:'Notes',type:'textarea'}],v=>add('ops_quotations',{case_id:caseId,reference:v.reference,amount:Number(v.amount||0),currency:'AED',valid_until:v.valid_until||null,status:'DRAFT',notes:v.notes||'',created_by:S.user.id})));
     root.querySelector('[data-a="message"]')?.addEventListener('click',()=>form('Add case message',[{key:'body',label:'Message',type:'textarea'}],v=>add('ops_case_messages',{case_id:caseId,sender_id:S.user.id,body:v.body})));
     root.querySelector('[data-a="travel"]')?.addEventListener('click',()=>{const i=data.itinerary||{};form('Travel itinerary',[{key:'departure_city',label:'Departure city',value:i.departure_city},{key:'arrival_city',label:'Arrival city',value:i.arrival_city},{key:'departure_date',label:'Departure date',type:'date',value:i.departure_date},{key:'return_date',label:'Return date',type:'date',value:i.return_date},{key:'outbound_flight',label:'Outbound flight',value:i.outbound_flight},{key:'return_flight',label:'Return flight',value:i.return_flight},{key:'hotel_name',label:'Hotel',value:i.hotel_name},{key:'hotel_check_in',label:'Hotel check-in',type:'date',value:i.hotel_check_in},{key:'hotel_check_out',label:'Hotel check-out',type:'date',value:i.hotel_check_out},{key:'visa_status',label:'Visa status',value:i.visa_status||'PENDING'},{key:'attendants',label:'Attendants',type:'number',value:i.attendants||0},{key:'notes',label:'Notes',type:'textarea',value:i.notes}],v=>data.itinerary.id?supabase.from('ops_itineraries').update({...v,attendants:Number(v.attendants||0)}).eq('id',data.itinerary.id):add('ops_itineraries',{case_id:caseId,...v,attendants:Number(v.attendants||0)}))});
