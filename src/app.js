@@ -22,7 +22,7 @@ const canDelete=()=>superAdmin();
 const canEditModule=name=>{
   if(superAdmin()) return true;
   if(name==='billing') return canFinance();
-  if(name==='hospitals'||name==='referrers') return admin();
+  if(name==='hospitals'||name==='referral network'||name==='referrers') return admin();
   return canWrite();
 };
 const toast=s=>{const t=$('toast');t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)};
