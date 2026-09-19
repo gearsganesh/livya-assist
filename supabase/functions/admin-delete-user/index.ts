@@ -2,10 +2,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-function respond(body: unknown, status = 200) {
+function respond(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    ...init,
+    headers: { ...corsHeaders, ...(init.headers || {}), 'Content-Type': 'application/json' }
   });
 }
 
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const { data:{user:caller}, error:callerError } = await callerClient.auth.getUser(token);
     if (callerError || !caller) return respond({error:'Unauthorized'},{status:401});
 
-    const { data:staff, error:staffError } = await admin.from('ops_staff')
+    const { data:staff, error:staffError } = await callerClient.from('ops_staff')
       .select('role,active').eq('id',caller.id).maybeSingle();
     if (staffError) throw staffError;
     if (!staff?.active || staff.role !== 'Super admin') return respond({error:'Forbidden'},{status:403});
