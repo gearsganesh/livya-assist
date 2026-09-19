@@ -247,3 +247,42 @@ drop policy if exists "staff insert ops_referrers" on public.ops_referrers;
 drop policy if exists "staff update ops_referrers" on public.ops_referrers;
 create policy "role insert ops_referrers" on public.ops_referrers for insert with check(ops_can_write('referrers'));
 create policy "role update ops_referrers" on public.ops_referrers for update using(ops_can_write('referrers')) with check(ops_can_write('referrers'));
+
+
+-- Scope private storage objects to their case folder and allow patients to read only visible case documents.
+drop policy if exists "staff read case document files" on storage.objects;
+create policy "staff read case document files" on storage.objects for select
+using(
+  bucket_id='case-documents'
+  and ops_is_staff()
+  and exists(
+    select 1 from public.ops_cases c
+    where c.id=(storage.foldername(name))[1]::uuid
+      and ops_can_access_center(c.center_id)
+  )
+);
+drop policy if exists "staff upload case document files" on storage.objects;
+create policy "staff upload case document files" on storage.objects for insert
+with check(
+  bucket_id='case-documents'
+  and ops_can_write('documents')
+  and exists(
+    select 1 from public.ops_cases c
+    where c.id=(storage.foldername(name))[1]::uuid
+      and ops_can_access_center(c.center_id)
+  )
+);
+create policy "patients read visible case document files" on storage.objects for select
+using(
+  bucket_id='case-documents'
+  and exists(
+    select 1
+    from public.ops_documents d
+    join public.ops_cases c on c.id=d.case_id
+    join public.ops_patients p on p.id=c.patient_id
+    where d.storage_path=name
+      and d.visible_to_patient=true
+      and p.app_user_id=auth.uid()
+      and p.portal_enabled=true
+  )
+);
