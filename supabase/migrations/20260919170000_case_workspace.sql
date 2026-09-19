@@ -192,3 +192,58 @@ create policy "staff upload case document files" on storage.objects for insert
 with check(bucket_id='case-documents' and ops_can_write('documents'));
 create policy "super admins delete case document files" on storage.objects for delete
 using(bucket_id='case-documents' and ops_is_super_admin());
+
+
+-- Replace broad staff write policies with role-aware write policies.
+do $$
+declare
+  t text;
+  module text;
+begin
+  foreach t in array array['ops_patients','ops_cases','ops_appointments','ops_tasks','ops_concierge','ops_billing']
+  loop
+    execute format('drop policy if exists "staff insert %s" on public.%I',t,t);
+    execute format('drop policy if exists "staff update %s" on public.%I',t,t);
+  end loop;
+end $$;
+
+drop policy if exists "staff insert ops_patients" on public.ops_patients;
+drop policy if exists "staff update ops_patients" on public.ops_patients;
+create policy "role insert ops_patients" on public.ops_patients for insert with check(ops_can_write('patients') and ops_can_access_center(center_id));
+create policy "role update ops_patients" on public.ops_patients for update using(ops_can_write('patients') and ops_can_access_center(center_id)) with check(ops_can_write('patients') and ops_can_access_center(center_id));
+
+drop policy if exists "staff insert ops_cases" on public.ops_cases;
+drop policy if exists "staff update ops_cases" on public.ops_cases;
+create policy "role insert ops_cases" on public.ops_cases for insert with check(ops_can_write('cases') and ops_can_access_center(center_id));
+create policy "role update ops_cases" on public.ops_cases for update using(ops_can_write('cases') and ops_can_access_center(center_id)) with check(ops_can_write('cases') and ops_can_access_center(center_id));
+
+drop policy if exists "staff insert ops_appointments" on public.ops_appointments;
+drop policy if exists "staff update ops_appointments" on public.ops_appointments;
+create policy "role insert ops_appointments" on public.ops_appointments for insert with check(ops_can_write('appointments') and exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id)));
+create policy "role update ops_appointments" on public.ops_appointments for update using(ops_can_write('appointments') and exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) with check(ops_can_write('appointments') and exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id)));
+
+drop policy if exists "staff insert ops_tasks" on public.ops_tasks;
+drop policy if exists "staff update ops_tasks" on public.ops_tasks;
+create policy "role insert ops_tasks" on public.ops_tasks for insert with check(ops_can_write('tasks') and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+create policy "role update ops_tasks" on public.ops_tasks for update using(ops_can_write('tasks') and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id)))) with check(ops_can_write('tasks') and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+
+drop policy if exists "staff insert ops_concierge" on public.ops_concierge;
+drop policy if exists "staff update ops_concierge" on public.ops_concierge;
+create policy "role insert ops_concierge" on public.ops_concierge for insert with check(ops_can_write('concierge') and exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id)));
+create policy "role update ops_concierge" on public.ops_concierge for update using(ops_can_write('concierge') and exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) with check(ops_can_write('concierge') and exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id)));
+
+drop policy if exists "staff insert ops_billing" on public.ops_billing;
+drop policy if exists "staff update ops_billing" on public.ops_billing;
+create policy "role insert ops_billing" on public.ops_billing for insert with check(ops_can_write('billing') and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+create policy "role update ops_billing" on public.ops_billing for update using(ops_can_write('billing') and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id)))) with check(ops_can_write('billing') and (patient_id is null or exists(select 1 from ops_patients p where p.id=patient_id and ops_can_access_center(p.center_id))) and (case_id is null or exists(select 1 from ops_cases c where c.id=case_id and ops_can_access_center(c.center_id))));
+
+-- Shared reference data: only Super Admin and Center Admin can maintain it.
+drop policy if exists "staff insert ops_hospitals" on public.ops_hospitals;
+drop policy if exists "staff update ops_hospitals" on public.ops_hospitals;
+create policy "role insert ops_hospitals" on public.ops_hospitals for insert with check(ops_can_write('hospitals'));
+create policy "role update ops_hospitals" on public.ops_hospitals for update using(ops_can_write('hospitals')) with check(ops_can_write('hospitals'));
+
+drop policy if exists "staff insert ops_referrers" on public.ops_referrers;
+drop policy if exists "staff update ops_referrers" on public.ops_referrers;
+create policy "role insert ops_referrers" on public.ops_referrers for insert with check(ops_can_write('referrers'));
+create policy "role update ops_referrers" on public.ops_referrers for update using(ops_can_write('referrers')) with check(ops_can_write('referrers'));
