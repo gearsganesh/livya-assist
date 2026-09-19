@@ -1,0 +1,3 @@
+{
+  "name":"livya-hims-suite","private":true,"workspaces":["client","admin"],"scripts":{"build":"npm run build -w client && npm run build -w admin"}
+}
