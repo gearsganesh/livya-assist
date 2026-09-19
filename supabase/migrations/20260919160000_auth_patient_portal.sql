@@ -55,3 +55,7 @@ using (exists (
   select 1 from public.ops_patients p
   where p.id = patient_id and p.app_user_id = auth.uid() and p.portal_enabled = true
 ));
+
+
+drop policy if exists "patient read own center" on public.ops_centers;
+create policy "patient read own center" on public.ops_centers for select using (exists (select 1 from public.ops_patients p where p.center_id = ops_centers.id and p.app_user_id = auth.uid() and p.portal_enabled = true));
