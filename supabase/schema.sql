@@ -193,7 +193,7 @@ alter table ops_referrers enable row level security;
 drop policy if exists "staff read centers" on ops_centers;
 drop policy if exists "admins write centers" on ops_centers;
 create policy "staff read centers" on ops_centers for select using(ops_is_staff());
-create policy "admins write centers" on ops_centers for all using(ops_is_admin()) with check(ops_is_admin());
+create policy "super admins write centers" on ops_centers for all using(ops_is_super_admin()) with check(ops_is_super_admin());
 
 -- Staff can see themselves; Super Admins can manage the full staff directory.
 drop policy if exists "staff read staff" on ops_staff;
