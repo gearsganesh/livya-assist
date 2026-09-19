@@ -2,14 +2,19 @@
 
 LIVYA OPS is the patient coordination and concierge operations application.
 
-## Repository
-This repository is the development source for the LIVYA OPS app.
+## Production architecture
+- Vite static frontend
+- Supabase Auth
+- Supabase PostgreSQL + Row Level Security
+- Supabase Edge Functions for privileged user administration
+- Vercel deployment from GitHub
+
+The browser is no longer the operational database. Patients, cases, appointments, concierge services, tasks, billing, hospitals, referral data, staff and centers are stored in Supabase.
 
 ## Modules
 - Dashboard
 - Patients
 - Cases with Board/List workflow
-- Appointments
 - Concierge
 - Tasks
 - Billing
@@ -17,42 +22,31 @@ This repository is the development source for the LIVYA OPS app.
 - Referral network
 - Team & Centers
 
-## Local testing
-1. Clone this repository.
-2. Open it in VS Code.
-3. Run `npm install` and then `npm run dev`, or open `index.html` with Live Server.
-4. The first local launch creates a Super Admin account.
-5. Operational records are not seeded with dummy patients, cases, appointments, billing or concierge data.
-6. Create the required centers in **Team & Centers** before creating patients and cases.
-
-## Supabase production
-`supabase/schema.sql` defines the production tables, authentication relationships and RLS policies. Supabase Auth is the source of truth for production users. The service-role key must only be used by Edge Functions and must never be placed in frontend code.
-
-The production RLS model is center-aware:
-- Super Admin: all centers.
-- Global-scope staff: all centers.
-- Center-scoped staff: only their assigned center.
-- Related appointments, tasks, concierge and billing records inherit access from their patient/case.
-- Hospital and referral directories are shared reference data.
-- User creation is handled by the Edge Function, with Center Admin creation restricted to the administrator's own center.
-
-### Supabase setup
-1. Create the dedicated LIVYA OPS Supabase project.
+## Supabase setup
+1. Open the dedicated LIVYA OPS Supabase project.
 2. Run `supabase/schema.sql` in the SQL Editor.
-3. Deploy `supabase/functions/admin-create-user` and `supabase/functions/admin-delete-user`.
-4. Create the first Super Admin in Supabase Auth and add its ID to `ops_staff` with role `Super admin` and scope `All centers`.
-5. Add the project URL and publishable key to the frontend configuration.
-6. Wire the frontend data layer to Supabase Auth/Postgres and remove localStorage as the production source of truth.
+3. Deploy:
+   - `supabase/functions/bootstrap-admin`
+   - `supabase/functions/admin-create-user`
+   - `supabase/functions/admin-delete-user`
+4. The login screen has a **First-time setup** action. The bootstrap function only creates an administrator when `ops_staff` is empty.
+5. Configure Vercel environment variables:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+6. Never put a Supabase secret/service-role key in browser code. Supabase publishable keys are intended for browser applications when RLS protects the database. citeturn2search11turn3search0
+
+The bootstrap Edge Function is intentionally public at the platform layer and performs its own one-time empty-database check. Its JWT verification is disabled in `supabase/config.toml`, which is required for a signed-out browser to call it. citeturn2search0turn2search1
+
+## Security model
+- Super Admin: all centers and staff administration.
+- Center Admin: center-scoped operational access and user creation inside their own center.
+- Coordinator / Finance / Viewer: access is controlled by role and center scope.
+- Related appointments, tasks, concierge and billing records inherit access from patient/case.
+- Hospital and referral directories are shared reference data.
+- RLS is enabled on every operational table.
 
 ## Deployment
-The project is structured for Vercel deployment.
+Connect `gearsganesh/livya-assist` to Vercel and set the two `VITE_SUPABASE_*` variables. The repository contains Vite SPA routing and a Vercel rewrite so direct application routes resolve correctly.
 
-```bash
-npm install
-npm run build
-```
-
-Connect the GitHub repository `gearsganesh/livya-assist` to Vercel. Every push to `main` can then trigger a new deployment.
-
-## Security
-Do not commit `.env` files, service-role keys, real patient data, or real credentials. Only use the Supabase publishable/anon key in browser code. Keep the service-role key inside Supabase Edge Functions.
+## Important
+Do not commit real patient data, passwords, Supabase secret keys, or `.env` files. The publishable key may be bundled into browser code, but authorization still comes from Supabase Auth and RLS. citeturn2search11
