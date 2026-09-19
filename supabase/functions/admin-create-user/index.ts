@@ -6,7 +6,12 @@ const ROLES=['Super admin','Coordinator','Finance','Center admin','Viewer'];
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok');
   try {
-    const url=Deno.env.get('SUPABASE_URL')!, key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const url=Deno.env.get('SUPABASE_URL')!;
+    const secretJson=Deno.env.get('SUPABASE_SECRET_KEYS')||'{}';
+    let key='';
+    try{const keys=JSON.parse(secretJson);key=String(Object.values(keys)[0]||'')}catch(_){}
+    key=key||Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+    if(!url||!key) throw new Error('Server configuration is incomplete');
     const auth=req.headers.get('Authorization')||'';
     const client=createClient(url,key,{global:{headers:{Authorization:auth}}});
     const token=auth.replace(/^Bearer\s+/,'');
