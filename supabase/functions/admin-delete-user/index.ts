@@ -2,7 +2,13 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 Deno.serve(async(req)=>{
   try{
-    const url=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,auth=req.headers.get('Authorization')||'';
+    const url=Deno.env.get('SUPABASE_URL')!;
+    const secretJson=Deno.env.get('SUPABASE_SECRET_KEYS')||'{}';
+    let key='';
+    try{const keys=JSON.parse(secretJson);key=String(Object.values(keys)[0]||'')}catch(_){}
+    key=key||Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+    if(!url||!key) throw new Error('Server configuration is incomplete');
+    const auth=req.headers.get('Authorization')||'';
     const c=createClient(url,key,{global:{headers:{Authorization:auth}}});
     const {data:{user:caller}}=await c.auth.getUser(auth.replace(/^Bearer\s+/,''));
     if(!caller)return Response.json({error:'Unauthorized'},{status:401});
