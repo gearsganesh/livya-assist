@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     if (!full_name || !email || password.length < 8) return Response.json({error:'Name, email and password are required'},{status:400});
     const { data, error:createError } = await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name}});
     if (createError) throw createError;
-    const { error:staffError } = await admin.from('ops_staff').insert({id:data.user.id,full_name,role:'Super admin',scope:'All centers',active:true});
+    const { error:staffError } = await admin.from('ops_staff').insert({id:data.user.id,full_name,email,role:'Super admin',scope:'All centers',active:true});
     if (staffError) {
       await admin.auth.admin.deleteUser(data.user.id);
       throw staffError;
