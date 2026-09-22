@@ -29,7 +29,7 @@ const toast=s=>{const t=$('toast');t.textContent=s;t.classList.add('show');setTi
 const run=async f=>{try{await f()}catch(e){console.error(e);toast(e.message||'Operation failed')}};
 const centers=()=>S.staff?.role==='Super admin'||S.staff?.scope==='All centers'?D.centers:D.centers.filter(c=>c.name===S.staff.scope);
 const rows=a=>S.center==='All centers'?a:a.filter(x=>x.center_id===S.center);
-const scopedRows=a=>S.center==='All centers'?a:a.filter(x=>{if(x.center_id)return x.center_id===S.center;const p=x.patient_id&&D.patients.find(p=>p.id===x.patient_id);if(p?.center_id)return p.center_id===S.center;const k=x.case_id&&D.cases.find(c=>c.id===x.case_id);return k?.center_id===S.center});
+const scopedRows=a=>S.center==='All centers'?a:a.filter(x=>{if(x.center_id)return x.center_id===S.center;const p=x.patient_id&&D.patients.find(p=>p.id===x.patient_id);if(p?.center_id)return p.center_id===S.center;const k=x.case_id&&D.cases.find(c=>c.id===x.case_id);if(k?.center_id)return k.center_id===S.center;return true});
 const caseLabel=id=>{const c=D.cases.find(x=>x.id===id);return c?c.case_code+' · '+patient(c.patient_id):''};
 const patient=id=>D.patients.find(x=>x.id===id)?.full_name||'Unknown patient';
 const center=id=>D.centers.find(x=>x.id===id)?.name||'';
