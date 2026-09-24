@@ -36,8 +36,8 @@ Deno.serve(async (req) => {
     const { data:{ user: caller }, error: callerError } = await callerClient.auth.getUser(token);
     if (callerError || !caller) return respond({error:'Unauthorized'},{status:401});
 
-    const { data: staff, error: staffError } = await callerClient
-      .from('ops_staff').select('role,scope,active').eq('id', caller.id).maybeSingle();
+    const { data: staff, error: staffError } = await admin.from('ops_staff')
+      .select('role,scope,active').eq('id', caller.id).maybeSingle();
     if (staffError) throw staffError;
     if (!staff?.active || staff.role !== 'Super admin') return respond({error:'Forbidden'},{status:403});
 
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     if (!email || password.length < 8 || !full_name) return respond({error:'Name, email and password are required'},{status:400});
     if (!ROLES.includes(role)) return respond({error:'Invalid role'},{status:400});
     if (scope !== 'All centers') {
-      const { data:center, error:centerError } = await callerClient.from('ops_centers')
+      const { data:center, error:centerError } = await admin.from('ops_centers')
         .select('id').eq('name',scope).eq('active',true).maybeSingle();
       if (centerError) throw centerError;
       if (!center) return respond({error:'Invalid or inactive center scope'},{status:400});
