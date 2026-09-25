@@ -6,6 +6,47 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable__edgISlScMx7zmDT1wGVpA_1N788YwM',
   { auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true} }
 );
+
+const SESSION_MAX_MS = 3 * 60 * 60 * 1000;
+const SESSION_STARTED_PREFIX = 'livya_session_started_at:';
+let sessionTimer = null;
+
+const sessionKey = userId => SESSION_STARTED_PREFIX + userId;
+const startSessionTimer = userId => {
+  clearTimeout(sessionTimer);
+  const key = sessionKey(userId);
+  let started = Number(localStorage.getItem(key));
+  if (!Number.isFinite(started) || started <= 0) {
+    started = Date.now();
+    localStorage.setItem(key, String(started));
+  }
+  const remaining = SESSION_MAX_MS - (Date.now() - started);
+  if (remaining <= 0) {
+    expireSession(userId);
+    return false;
+  }
+  sessionTimer = setTimeout(() => expireSession(userId), remaining);
+  return true;
+};
+const beginNewSession = userId => {
+  localStorage.setItem(sessionKey(userId), String(Date.now()));
+  return startSessionTimer(userId);
+};
+const clearSessionTimer = () => {
+  clearTimeout(sessionTimer);
+  sessionTimer = null;
+};
+async function expireSession(userId) {
+  clearSessionTimer();
+  localStorage.removeItem(sessionKey(userId));
+  await supabase.auth.signOut();
+  S.user = null;
+  S.staff = null;
+  S.patient = null;
+  S.loading = false;
+  render();
+  toast('Your 3-hour session has expired. Please sign in again.');
+}
 const STAGES=['ENQUIRY','ASSESSMENT','QUOTATION','ACCEPTED','TRAVEL PLANNED','IN TREATMENT','DISCHARGED','FOLLOW UP'];
 const NAV=['Dashboard','Cases','Patients','Appointments','Concierge','Tasks','Billing','Hospitals','Referral network','Team & Centers'];
 const ROLES=['Super admin','Coordinator','Finance','Center admin','Viewer'];
@@ -83,10 +124,17 @@ function go(p){S.page=p;S.q='';render()}
 async function appointments(){const data=scopedRows(D.appointments).filter(a=>JSON.stringify(a).toLowerCase().includes(S.q.toLowerCase())).map(a=>({row:'<tr><td>'+esc(patient(a.patient_id))+'</td><td>'+esc(a.title)+'</td><td>'+esc(a.doctor||'')+'</td><td>'+esc(a.appointment_date)+' '+esc(a.appointment_time||'')+'</td><td>'+esc(a.status)+'</td><td>'+(canWrite()?'<button onclick="editAppointment(\''+a.id+'\')">Edit</button> ':'')+(canDelete()?'<button class="danger" onclick="delRow(\'ops_appointments\',\''+a.id+'\')">Delete</button>':'')+'</td></tr>'}));return tablePage('Appointments','newAppointment()',['PATIENT','TITLE','DOCTOR','DATE / TIME','STATUS','ACTIONS'],data)}
 function render(){if(S.patient){patientPortal().then(b=>{$('app').innerHTML=b}).catch(e=>{$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Patient portal error</h2><p>'+esc(e.message)+'</p></div></div>'});return}if(!S.staff){$('app').innerHTML=auth();return}if(S.loading){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Loading LIVYA OPS…</h2></div></div>';return}let b=S.page==='Dashboard'?dashboard():S.page==='Patients'?patients():S.page==='Cases'?cases():S.page==='Appointments'?appointments():S.page==='Team & Centers'?team():cfg[S.page]?generic(S.page):team();shell(b)}
 async function bootstrap(){const full_name=$('sn').value,email=$('se').value.trim().toLowerCase(),password=$('spw').value;if(password.length<8)return toast('Use an 8+ character password');const r=await supabase.functions.invoke('bootstrap-admin',{body:{full_name,email,password}});if(r.error)throw r.error;if(r.data?.error)throw new Error(r.data.error);const x=await supabase.auth.signInWithPassword({email,password});if(x.error)throw x.error;await boot()}
-async function login(e){e.preventDefault();const r=await supabase.auth.signInWithPassword({email:$('email').value.trim().toLowerCase(),password:$('password').value});if(r.error){$('err').textContent=r.error.message;return}await boot()}
-async function logout(){await supabase.auth.signOut();S.user=null;S.staff=null;S.patient=null;render()}
-async function boot(){const u=await supabase.auth.getUser();if(!u.data.user)return;const staff=await supabase.from('ops_staff').select('*').eq('id',u.data.user.id).maybeSingle();if(staff.error)throw staff.error;if(staff.data?.active){S.user=u.data.user;S.staff=staff.data;S.patient=null;S.setup=false;await load();return}const patient=await supabase.from('ops_patients').select('*').eq('app_user_id',u.data.user.id).eq('portal_enabled',true).maybeSingle();if(patient.error)throw patient.error;if(patient.data){S.user=u.data.user;S.staff=null;S.patient=patient.data;S.setup=false;render();return}await supabase.auth.signOut();S.user=null;S.staff=null;S.patient=null;throw new Error('Account is not active')}
-supabase.auth.onAuthStateChange((event,s)=>{if(event==='PASSWORD_RECOVERY'){passwordRecovery();return}if(s&&!S.staff&&!S.patient)boot().catch(e=>toast(e.message))});
+async function login(e){e.preventDefault();const r=await supabase.auth.signInWithPassword({email:$('email').value.trim().toLowerCase(),password:$('password').value});if(r.error){$('err').textContent=r.error.message;return}if(!beginNewSession(r.data.user.id))return;await boot()}
+async function logout(){const userId=S.user?.id;clearSessionTimer();if(userId)localStorage.removeItem(sessionKey(userId));await supabase.auth.signOut();S.user=null;S.staff=null;S.patient=null;render()}
+async function boot(){const u=await supabase.auth.getUser();if(!u.data.user)return;if(!startSessionTimer(u.data.user.id))return;const staff=await supabase.from('ops_staff').select('*').eq('id',u.data.user.id).maybeSingle();if(staff.error)throw staff.error;if(staff.data?.active){S.user=u.data.user;S.staff=staff.data;S.patient=null;S.setup=false;await load();return}const patient=await supabase.from('ops_patients').select('*').eq('app_user_id',u.data.user.id).eq('portal_enabled',true).maybeSingle();if(patient.error)throw patient.error;if(patient.data){S.user=u.data.user;S.staff=null;S.patient=patient.data;S.setup=false;render();return}await supabase.auth.signOut();S.user=null;S.staff=null;S.patient=null;throw new Error('Account is not active')}
+supabase.auth.onAuthStateChange((event,s)=>{
+  if(event==='PASSWORD_RECOVERY'){passwordRecovery();return}
+  if(event==='SIGNED_OUT'){
+    clearSessionTimer();
+    S.user=null;S.staff=null;S.patient=null;
+    render();
+  }
+});
 Object.assign(window,{go,render,run,bootstrap,login,forgotPassword,passwordRecovery,saveNewPassword,logout,openCaseWorkspace,newPatient,savePatient,newCase,saveCase,editPatient:id=>newPatient(id),editCase:id=>newCase(id),newAppointment,saveAppointment,editAppointment:id=>newAppointment(id),newTask,saveTask,editTask:id=>newTask(id),newConcierge,saveConcierge,editConcierge:id=>newConcierge(id),newBilling,saveBilling,editBilling:id=>newBilling(id),newHospital,newReferrer,editGeneric,newUser,saveUser,editUser:id=>newUser(id),deleteUser,newCenter,patientAccount,managePatientAccount,closeModal,caseMode,moveCase,delRow,saveHospital,saveReferrer,saveHospitalEdit,saveReferrerEdit,saveCenter,S});
 render();
 (async()=>{try{const s=await supabase.auth.getSession();if(s.data.session){await boot();return}const r=await supabase.functions.invoke('bootstrap-admin',{body:{action:'status'}});if(r.error)throw r.error;if(r.data?.error)throw new Error(r.data.error);S.setup=!!r.data?.needs_setup;render()}catch(e){console.error('LIVYA startup check failed:',e);S.setup=false;render()}})();function cases(){return head('Cases','newCase()',filter())+'<div class="toolbar"><input placeholder="Search cases..." value="'+esc(S.q)+'" oninput="S.q=this.value;render()"><button onclick="caseMode(\'board\')">Board</button><button onclick="caseMode(\'list\')">List</button></div><div id="caseview">'+caseBoard(rows(D.cases))+'</div>'}
