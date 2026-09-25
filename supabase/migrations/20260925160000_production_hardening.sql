@@ -86,11 +86,3 @@ DROP POLICY IF EXISTS "staff read staff" ON public.ops_staff;
 CREATE POLICY "staff read staff" ON public.ops_staff FOR SELECT TO authenticated
 USING ((SELECT auth.uid())=id OR ops_is_super_admin());
 
-DO $$
-DECLARE r record;
-BEGIN
-  FOR r IN SELECT schemaname, tablename, policyname FROM pg_policies WHERE schemaname='public' AND tablename LIKE 'ops_%'
-  LOOP
-    EXECUTE format('ALTER POLICY %I ON %I.%I TO authenticated',r.policyname,r.schemaname,r.tablename);
-  END LOOP;
-END $$;
