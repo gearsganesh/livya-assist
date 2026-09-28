@@ -21,3 +21,243 @@ td:last-child{min-width:150px}td:last-child button{vertical-align:middle}
 .authcard .brand>b{width:60px;height:60px;flex-basis:60px}
 .empty{min-height:90px;display:flex;align-items:center;justify-content:center}
 @media(max-width:760px){.head>div:last-child{justify-content:flex-start}.toolbar{width:100%}.toolbar input{flex:1 1 100%;width:100%}.toolbar select,.toolbar>button{flex:0 0 auto}.dialog{max-height:92vh}}
+
+
+/* =========================================================
+   SCREENSHOT-MATCH UI
+   Reference: LIVYA Team & Centers desktop screenshot
+   Keep functional markup unchanged, tune geometry/visuals only.
+   ========================================================= */
+:root{
+  --livya-red:#b10b18;
+  --livya-red-dark:#a20a16;
+  --livya-bg:#fbfbfa;
+  --livya-border:#e3e1df;
+  --livya-text:#1f2933;
+  --livya-muted:#747b82;
+}
+
+html,body{background:var(--livya-bg);color:var(--livya-text)}
+body{font-family:Inter,Segoe UI,Arial,sans-serif}
+
+aside{
+  width:237px;
+  background:linear-gradient(180deg,#b20b17 0%,#a90916 100%);
+  padding:22px 16px 20px;
+}
+.brand.livya-brand{
+  padding:0 0 29px 32px;
+  display:block;
+}
+.brand.livya-brand .livya-wordmark{
+  font-size:30px;
+  line-height:1;
+  letter-spacing:2.5px;
+  font-weight:300;
+}
+.brand.livya-brand section{
+  margin-top:6px;
+  max-width:145px;
+}
+.brand.livya-brand section small{
+  display:block;
+  font-size:11px;
+  line-height:1.25;
+  letter-spacing:0;
+}
+nav{gap:4px}
+nav button{
+  min-height:40px;
+  padding:9px 9px;
+  border-radius:7px;
+  font-size:16px;
+  font-weight:600;
+}
+nav button:hover,nav button.active{background:rgba(255,255,255,.16)}
+footer{
+  padding:19px 8px 0;
+  gap:5px;
+}
+footer strong{font-size:16px}
+footer small{font-size:10px}
+footer button{
+  background:#fff;
+  color:var(--livya-red-dark);
+  border-radius:6px;
+  padding:8px 12px;
+  margin-top:10px;
+  font-size:12px;
+}
+
+main{
+  margin-left:237px;
+  width:calc(100% - 237px);
+  min-height:100vh;
+  padding:0 31px 40px;
+}
+header{
+  height:78px;
+  border-bottom:1px solid #e6e3e1;
+}
+header strong{
+  font-size:16px;
+  font-weight:700;
+}
+header span{
+  font-size:13px;
+  gap:12px;
+}
+header i{
+  width:37px;
+  height:37px;
+  background:#d51e63;
+  font-size:14px;
+}
+
+.head{
+  padding:34px 0 22px;
+  align-items:end;
+}
+.head h1{
+  margin:0;
+  font-size:29px;
+  line-height:1.12;
+  font-weight:700;
+  letter-spacing:-.025em;
+}
+.head p{
+  margin:7px 0 0;
+  font-size:13px;
+  color:#777d83;
+}
+.head>div:last-child{
+  gap:10px;
+}
+.primary,.head .primary{
+  min-height:43px;
+  padding:10px 18px;
+  border-radius:7px;
+  background:var(--livya-red);
+  font-size:15px;
+  font-weight:700;
+}
+.head .primary{margin-bottom:1px}
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  margin-bottom:13px;
+  align-items:center;
+}
+.toolbar input,.toolbar select,.head select{
+  height:44px;
+  min-height:44px;
+  border:1px solid #dedddb;
+  border-radius:7px;
+  background:#fff;
+  color:#333;
+  font-size:16px;
+}
+.toolbar input{
+  padding:10px 12px;
+}
+.toolbar select{
+  width:278px;
+  padding:10px 12px;
+}
+.toolbar input::placeholder{color:#777}
+
+.table{
+  background:#fff;
+  border:1px solid var(--livya-border);
+  border-radius:9px;
+  padding:0;
+  overflow:hidden;
+  box-shadow:none;
+}
+table{font-size:13px}
+th{
+  height:42px;
+  padding:12px 13px;
+  background:#fbfaf9;
+  color:#626a72;
+  font-size:10px;
+  font-weight:500;
+  letter-spacing:.02em;
+  border-bottom:1px solid #e7e4e2;
+}
+td{
+  height:63px;
+  padding:15px 13px;
+  border-bottom:0;
+  color:#20262c;
+  font-size:13px;
+}
+td button{
+  min-height:36px;
+  padding:6px 10px;
+  background:#f5f4f3;
+  border:1px solid #dcdad8;
+  border-radius:6px;
+  color:#30343a;
+  font-size:12px;
+}
+td button.danger{color:#30343a}
+.lower{
+  margin-top:15px;
+  padding:19px;
+}
+.lower h2{
+  margin:0 0 16px;
+  font-size:17px;
+  line-height:1.2;
+}
+.lower>.primary{
+  min-height:43px;
+  margin-bottom:16px;
+}
+.centergrid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:0;
+}
+.centergrid>div{
+  min-height:111px;
+  border:1px solid #e6e3e1;
+  border-radius:8px;
+  padding:13px;
+  display:grid;
+  align-content:start;
+  gap:4px;
+  background:#fff;
+}
+.centergrid b{
+  font-size:16px;
+  line-height:1.25;
+}
+.centergrid span{
+  font-size:12px;
+  color:#858585;
+  margin-bottom:1px;
+}
+.centergrid button{
+  font-size:12px;
+  line-height:1.2;
+  padding:1px 0;
+  color:#b10b18;
+}
+
+@media(max-width:1000px){
+  aside{width:220px}
+  main{margin-left:220px;width:calc(100% - 220px)}
+  .centergrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  aside{width:70px;padding:20px 8px}
+  .brand.livya-brand{padding-left:0}
+  main{margin-left:70px;width:calc(100% - 70px);padding:0 15px 30px}
+  .toolbar{flex-wrap:wrap}
+  .toolbar input{flex:1 1 100%;width:100%}
+  .toolbar select{width:auto;flex:1}
+  .centergrid{grid-template-columns:1fr}
+}
