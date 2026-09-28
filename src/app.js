@@ -6,6 +6,47 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable__edgISlScMx7zmDT1wGVpA_1N788YwM',
   { auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true} }
 );
+
+const SESSION_MAX_MS = 3 * 60 * 60 * 1000;
+const SESSION_STARTED_PREFIX = 'livya_session_started_at:';
+let sessionTimer = null;
+
+const sessionKey = userId => SESSION_STARTED_PREFIX + userId;
+const clearSessionTimer = () => {
+  clearTimeout(sessionTimer);
+  sessionTimer = null;
+};
+const startSessionTimer = userId => {
+  clearSessionTimer();
+  const key = sessionKey(userId);
+  let started = Number(localStorage.getItem(key));
+  if (!Number.isFinite(started) || started <= 0) {
+    started = Date.now();
+    localStorage.setItem(key, String(started));
+  }
+  const remaining = SESSION_MAX_MS - (Date.now() - started);
+  if (remaining <= 0) {
+    expireSession(userId);
+    return false;
+  }
+  sessionTimer = setTimeout(() => expireSession(userId), remaining);
+  return true;
+};
+const beginNewSession = userId => {
+  localStorage.setItem(sessionKey(userId), String(Date.now()));
+  return startSessionTimer(userId);
+};
+async function expireSession(userId) {
+  clearSessionTimer();
+  localStorage.removeItem(sessionKey(userId));
+  await supabase.auth.signOut();
+  S.user = null;
+  S.staff = null;
+  S.patient = null;
+  S.loading = false;
+  render();
+  toast('Your 3-hour session has expired. Please sign in again.');
+}
 const STAGES=['ENQUIRY','ASSESSMENT','QUOTATION','ACCEPTED','TRAVEL PLANNED','IN TREATMENT','DISCHARGED','FOLLOW UP'];
 const NAV=['Dashboard','Cases','Patients','Appointments','Concierge','Tasks','Billing','Hospitals','Referral network','Team & Centers'];
 const ROLES=['Super admin','Coordinator','Finance','Center admin','Viewer'];
@@ -39,7 +80,27 @@ function closeModal(){document.querySelector('.modal')?.remove()}
 function modal(title,form,save){$('app').insertAdjacentHTML('beforeend','<div class="modal"><div class="dialog"><button class="close" onclick="closeModal()">×</button><h2>'+esc(title)+'</h2>'+form+'<div class="modal-actions"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="run(()=>'+save+')">Save</button></div></div></div>')}
 async function saveRow(table,id,data){const q=id?supabase.from(table).update({...data,updated_at:new Date().toISOString()}).eq('id',id):supabase.from(table).insert(data);const r=await q;if(r.error)throw r.error;closeModal();await load();toast('Saved')}
 async function delRow(table,id){if(!confirm('Delete this record?'))return;const r=await supabase.from(table).delete().eq('id',id);if(r.error)throw r.error;await load();toast('Deleted')}
-function head(title,add,extra=''){return '<div class="head"><div><h1>'+esc(title)+'</h1><p>Patient coordination & concierge operations</p></div><div>'+extra+(add&&canEditModule(title.toLowerCase())?'<button class="primary" onclick="'+add+'">+ '+esc(add.split('(')[0])+'</button>':'')+'</div></div>'}
+const ACTION_LABELS={
+  newCase:'New Case',
+  newPatient:'New Patient',
+  newAppointment:'New Appointment',
+  newConcierge:'New Concierge',
+  newTask:'New Task',
+  newBilling:'New Billing',
+  newHospital:'New Hospital',
+  newReferrer:'New Referrer',
+  newUser:'New User'
+};
+function actionLabel(add){
+  const key=String(add||'').split('(')[0];
+  return ACTION_LABELS[key]||key;
+}
+function head(title,add,extra=''){
+  return '<div class="head"><div><h1>'+esc(title)+'</h1><p>Patient coordination & concierge operations</p></div><div>'+
+    extra+
+    (add&&canEditModule(title.toLowerCase())?'<button class="primary" onclick="'+add+'">+ '+esc(actionLabel(add))+'</button>':'')+
+    '</div></div>'
+}
 function filter(){return '<select onchange="S.center=this.value;render()"><option value="All centers"'+(S.center==='All centers'?' selected':'')+'>All centers</option>'+centers().map(c=>'<option value="'+c.id+'"'+(S.center===c.id?' selected':'')+'>'+esc(c.name)+'</option>').join('')+'</select>'}
 function tablePage(title,add,cols,data){const x=data.filter(a=>JSON.stringify(a).toLowerCase().includes(S.q.toLowerCase()));return head(title,add)+'<div class="toolbar"><input placeholder="Search..." value="'+esc(S.q)+'" oninput="S.q=this.value;render()">'+filter()+'</div><section class="table"><table><thead><tr>'+cols.map(c=>'<th>'+c+'</th>').join('')+'</tr></thead><tbody>'+(x.map(a=>a.row).join('')||'<tr><td colspan="'+cols.length+'" class="empty">No records yet.</td></tr>')+'</tbody></table></section>'}
 async function load(){S.loading=true;render();const q=[['centers',supabase.from('ops_centers').select('*').order('name')],['staff',supabase.from('ops_staff').select('id,full_name,email,role,scope,active').order('full_name')],['patients',supabase.from('ops_patients').select('*').order('created_at',{ascending:false})],['cases',supabase.from('ops_cases').select('*').order('created_at',{ascending:false})],['appointments',supabase.from('ops_appointments').select('*').order('appointment_date')],['concierge',supabase.from('ops_concierge').select('*').order('created_at',{ascending:false})],['tasks',supabase.from('ops_tasks').select('*').order('due_date')],['billing',supabase.from('ops_billing').select('*').order('created_at',{ascending:false})],['hospitals',supabase.from('ops_hospitals').select('*').order('name')],['referrers',supabase.from('ops_referrers').select('*').order('name')]];const r=await Promise.all(q.map(x=>x[1]));r.forEach((x,i)=>{if(x.error)throw x.error;D[q[i][0]]=x.data||[]});S.loading=false;render()}
@@ -80,13 +141,54 @@ async function saveNewPassword(){const password=$('npw').value,confirmPassword=$
 async function forgotPassword(){const email=$('email')?.value?.trim().toLowerCase();if(!email)return toast('Enter your email first');const r=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});if(r.error)throw r.error;toast('Password reset email sent');}
 function shell(body){$('app').innerHTML='<div class="app"><aside><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Coordination & Concierge</small></section></div><nav>'+NAV.map(n=>'<button class="'+(S.page===n?'active':'')+'" onclick="go(\''+n+'\')">'+esc(n)+'</button>').join('')+'</nav><footer><strong>'+esc(S.staff.full_name)+'</strong><small>'+esc(S.staff.role)+' · '+esc(S.staff.scope)+'</small><button onclick="logout()">Sign out</button></footer></aside><main><header><strong>LIVYA OPS</strong><span>'+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' <i>'+esc(S.staff.full_name[0])+'</i></span></header>'+body+'</main></div>'}
 function go(p){S.page=p;S.q='';render()}
-async function appointments(){const data=scopedRows(D.appointments).filter(a=>JSON.stringify(a).toLowerCase().includes(S.q.toLowerCase())).map(a=>({row:'<tr><td>'+esc(patient(a.patient_id))+'</td><td>'+esc(a.title)+'</td><td>'+esc(a.doctor||'')+'</td><td>'+esc(a.appointment_date)+' '+esc(a.appointment_time||'')+'</td><td>'+esc(a.status)+'</td><td>'+(canWrite()?'<button onclick="editAppointment(\''+a.id+'\')">Edit</button> ':'')+(canDelete()?'<button class="danger" onclick="delRow(\'ops_appointments\',\''+a.id+'\')">Delete</button>':'')+'</td></tr>'}));return tablePage('Appointments','newAppointment()',['PATIENT','TITLE','DOCTOR','DATE / TIME','STATUS','ACTIONS'],data)}
+function appointments(){const data=scopedRows(D.appointments).filter(a=>JSON.stringify(a).toLowerCase().includes(S.q.toLowerCase())).map(a=>({row:'<tr><td>'+esc(patient(a.patient_id))+'</td><td>'+esc(a.title)+'</td><td>'+esc(a.doctor||'')+'</td><td>'+esc(a.appointment_date)+' '+esc(a.appointment_time||'')+'</td><td>'+esc(a.status)+'</td><td>'+(canWrite()?'<button onclick="editAppointment(\''+a.id+'\')">Edit</button> ':'')+(canDelete()?'<button class="danger" onclick="delRow(\'ops_appointments\',\''+a.id+'\')">Delete</button>':'')+'</td></tr>'}));return tablePage('Appointments','newAppointment()',['PATIENT','TITLE','DOCTOR','DATE / TIME','STATUS','ACTIONS'],data)}
 function render(){if(S.patient){patientPortal().then(b=>{$('app').innerHTML=b}).catch(e=>{$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Patient portal error</h2><p>'+esc(e.message)+'</p></div></div>'});return}if(!S.staff){$('app').innerHTML=auth();return}if(S.loading){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Loading LIVYA OPS…</h2></div></div>';return}let b=S.page==='Dashboard'?dashboard():S.page==='Patients'?patients():S.page==='Cases'?cases():S.page==='Appointments'?appointments():S.page==='Team & Centers'?team():cfg[S.page]?generic(S.page):team();shell(b)}
 async function bootstrap(){const full_name=$('sn').value,email=$('se').value.trim().toLowerCase(),password=$('spw').value;if(password.length<8)return toast('Use an 8+ character password');const r=await supabase.functions.invoke('bootstrap-admin',{body:{full_name,email,password}});if(r.error)throw r.error;if(r.data?.error)throw new Error(r.data.error);const x=await supabase.auth.signInWithPassword({email,password});if(x.error)throw x.error;await boot()}
-async function login(e){e.preventDefault();const r=await supabase.auth.signInWithPassword({email:$('email').value.trim().toLowerCase(),password:$('password').value});if(r.error){$('err').textContent=r.error.message;return}await boot()}
-async function logout(){await supabase.auth.signOut();S.user=null;S.staff=null;S.patient=null;render()}
-async function boot(){const u=await supabase.auth.getUser();if(!u.data.user)return;const staff=await supabase.from('ops_staff').select('*').eq('id',u.data.user.id).maybeSingle();if(staff.error)throw staff.error;if(staff.data?.active){S.user=u.data.user;S.staff=staff.data;S.patient=null;S.setup=false;await load();return}const patient=await supabase.from('ops_patients').select('*').eq('app_user_id',u.data.user.id).eq('portal_enabled',true).maybeSingle();if(patient.error)throw patient.error;if(patient.data){S.user=u.data.user;S.staff=null;S.patient=patient.data;S.setup=false;render();return}await supabase.auth.signOut();S.user=null;S.staff=null;S.patient=null;throw new Error('Account is not active')}
-supabase.auth.onAuthStateChange((event,s)=>{if(event==='PASSWORD_RECOVERY'){passwordRecovery();return}if(s&&!S.staff&&!S.patient)boot().catch(e=>toast(e.message))});
+async function login(e){
+  e.preventDefault();
+  const r=await supabase.auth.signInWithPassword({
+    email:$('email').value.trim().toLowerCase(),
+    password:$('password').value
+  });
+  if(r.error){$('err').textContent=r.error.message;return}
+  if(!beginNewSession(r.data.user.id))return;
+  await boot();
+}
+async function logout(){
+  clearSessionTimer();
+  if(S.user?.id)localStorage.removeItem(sessionKey(S.user.id));
+  await supabase.auth.signOut();
+  S.user=null;S.staff=null;S.patient=null;render();
+}
+async function boot(){
+  const u=await supabase.auth.getUser();
+  if(!u.data.user)return;
+  if(!startSessionTimer(u.data.user.id))return;
+  const staff=await supabase.from('ops_staff').select('*').eq('id',u.data.user.id).maybeSingle();
+  if(staff.error)throw staff.error;
+  if(staff.data?.active){
+    S.user=u.data.user;S.staff=staff.data;S.patient=null;S.setup=false;
+    await load();
+    return;
+  }
+  const patient=await supabase.from('ops_patients').select('*').eq('app_user_id',u.data.user.id).eq('portal_enabled',true).maybeSingle();
+  if(patient.error)throw patient.error;
+  if(patient.data){
+    S.user=u.data.user;S.staff=null;S.patient=patient.data;S.setup=false;render();return;
+  }
+  await supabase.auth.signOut();
+  localStorage.removeItem(sessionKey(u.data.user.id));
+  S.user=null;S.staff=null;S.patient=null;
+  throw new Error('Account is not active');
+}
+supabase.auth.onAuthStateChange((event,s)=>{
+  if(event==='PASSWORD_RECOVERY'){passwordRecovery();return}
+  if(event==='SIGNED_OUT'){
+    clearSessionTimer();
+    S.user=null;S.staff=null;S.patient=null;
+    render();
+  }
+});
 Object.assign(window,{go,render,run,bootstrap,login,forgotPassword,passwordRecovery,saveNewPassword,logout,openCaseWorkspace,newPatient,savePatient,newCase,saveCase,editPatient:id=>newPatient(id),editCase:id=>newCase(id),newAppointment,saveAppointment,editAppointment:id=>newAppointment(id),newTask,saveTask,editTask:id=>newTask(id),newConcierge,saveConcierge,editConcierge:id=>newConcierge(id),newBilling,saveBilling,editBilling:id=>newBilling(id),newHospital,newReferrer,editGeneric,newUser,saveUser,editUser:id=>newUser(id),deleteUser,newCenter,patientAccount,managePatientAccount,closeModal,caseMode,moveCase,delRow,saveHospital,saveReferrer,saveHospitalEdit,saveReferrerEdit,saveCenter,S});
 render();
 (async()=>{try{const s=await supabase.auth.getSession();if(s.data.session){await boot();return}const r=await supabase.functions.invoke('bootstrap-admin',{body:{action:'status'}});if(r.error)throw r.error;if(r.data?.error)throw new Error(r.data.error);S.setup=!!r.data?.needs_setup;render()}catch(e){console.error('LIVYA startup check failed:',e);S.setup=false;render()}})();function cases(){return head('Cases','newCase()',filter())+'<div class="toolbar"><input placeholder="Search cases..." value="'+esc(S.q)+'" oninput="S.q=this.value;render()"><button onclick="caseMode(\'board\')">Board</button><button onclick="caseMode(\'list\')">List</button></div><div id="caseview">'+caseBoard(rows(D.cases))+'</div>'}
@@ -94,4 +196,4 @@ function caseBoard(c){return '<div class="board">'+STAGES.map(s=>'<section><h3>'
 function caseMode(m){const c=rows(D.cases).filter(x=>JSON.stringify(x).toLowerCase().includes(S.q.toLowerCase()));$('caseview').innerHTML=m==='list'?'<div class="table"><table><thead><tr><th>CASE</th><th>PATIENT</th><th>STATUS</th><th>VALUE</th><th>ACTIONS</th></tr></thead><tbody>'+(c.map(x=>'<tr><td>'+esc(x.case_code)+'</td><td>'+esc(patient(x.patient_id))+'</td><td>'+esc(x.status)+'</td><td>'+money(x.estimated_value)+'</td><td><button onclick="openCaseWorkspace(\''+x.id+'\')">Open workspace</button> '+(write()?'<button onclick="editCase(\''+x.id+'\')">Edit</button> ':'')+(superAdmin()?'<button class="danger" onclick="delRow(\'ops_cases\',\''+x.id+'\')">Delete</button>':'')+'</td></tr>').join('')||'<tr><td colspan="5" class="empty">No cases found.</td></tr>')+'</tbody></table></div>':caseBoard(c)}
 const cfg={Concierge:['concierge','Concierge','newConcierge()',[['PATIENT','patient_id'],['CASE','case_id'],['SERVICE','service_type'],['STATUS','status'],['REVENUE','revenue']]],Tasks:['tasks','Tasks','newTask()',[['TITLE','title'],['PATIENT','patient_id'],['CASE','case_id'],['PRIORITY','priority'],['DUE','due_date'],['STATUS','status']]],Billing:['billing','Billing','newBilling()',[['INVOICE','invoice_number'],['PATIENT','patient_id'],['CASE','case_id'],['AMOUNT','amount'],['COMMISSION','commission'],['STATUS','status']]],Hospitals:['hospitals','Hospitals','newHospital()',[['NAME','name'],['CITY','city'],['SPECIALTY','specialty'],['CONTACT','contact']]],'Referral network':['referrers','Referral network','newReferrer()',[['NAME','name'],['ORGANIZATION','organization'],['CONTACT','contact']]]};
 function generic(name){const c=cfg[name];const data=scopedRows(D[c[0]]).map(x=>({row:'<tr>'+c[3].map(f=>'<td>'+esc(f[1]==='patient_id'?patient(x[f[1]]):f[1]==='case_id'?caseLabel(x[f[1]]):['amount','commission','revenue'].includes(f[1])?money(x[f[1]]):x[f[1]]||'')+'</td>').join('')+'<td>'+(canEditModule(name.toLowerCase())?'<button onclick="editGeneric(\''+c[0]+'\',\''+x.id+'\')">Edit</button> ':'')+(superAdmin()?'<button class="danger" onclick="delRow(\'ops_'+c[0]+'\',\''+x.id+'\')">Delete</button>':'')+'</td></tr>'}));return tablePage(c[1],c[2],c[3].map(x=>x[0]).concat('ACTIONS'),data)}
-function team(){return tablePage('Team & Centers',superAdmin()?'newUser()':null,['NAME','EMAIL','ROLE','SCOPE','STATUS','ACTIONS'],D.staff.map(x=>({row:'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(x.role)+'</td><td>'+esc(x.scope)+'</td><td>'+(x.active?'Active':'Inactive')+'</td><td>'+(superAdmin()?'<button onclick="editUser(\''+x.id+'\')">Edit</button> <button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')+'</td></tr>'})))+'<section class="panel lower"><h2>Centers</h2>'+(superAdmin()?'<button class="primary" onclick="newCenter()">＋ Add center</button>':'')+'<div class="centergrid">'+centers().map(c=>'<div><b>'+esc(c.name)+'</b><span>'+esc(c.city||'')+'</span>'+(superAdmin()?'<button onclick="newCenter(\''+c.id+'\')">Edit</button> <button class="danger" onclick="delRow(\'ops_centers\',\''+c.id+'\')">Delete</button>':'')+'</div>').join('')+'</div></section>'}
+function team(){return tablePage('Team & Centers',superAdmin()?'newUser()':null,['NAME','EMAIL','ROLE','SCOPE','STATUS','ACTIONS'],D.staff.map(x=>({row:'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(x.role)+'</td><td>'+esc(x.scope)+'</td><td>'+(x.active?'Active':'Inactive')+'</td><td>'+(superAdmin()?'<button onclick="editUser(\''+x.id+'\')">Edit</button> <button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')+'</td></tr>'})))+'<section class="panel lower"><h2>Centers</h2>'+(superAdmin()?'<button class="primary" onclick="newCenter()">+ Add Center</button>':'')+'<div class="centergrid">'+centers().map(c=>'<div><b>'+esc(c.name)+'</b><span>'+esc(c.city||'')+'</span>'+(superAdmin()?'<button onclick="newCenter(\''+c.id+'\')">Edit</button> <button class="danger" onclick="delRow(\'ops_centers\',\''+c.id+'\')">Delete</button>':'')+'</div>').join('')+'</div></section>'}
