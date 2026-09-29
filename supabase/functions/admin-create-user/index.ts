@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
     if (!staff?.active || !['SUPER_ADMIN','CENTER_MANAGER'].includes(callerRole)) return respond({error:'Forbidden'},{status:403});
 
     const body = await req.json();
+    const action = String(body.action || 'create').toLowerCase();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     const full_name = String(body.full_name || '').trim();
@@ -51,7 +52,9 @@ Deno.serve(async (req) => {
     let forcedCenterId = body.center_id ? String(body.center_id) : null;
     const hospital_id = body.hospital_id ? String(body.hospital_id) : null;
 
-    if (!email || password.length < 8 || !full_name) return respond({error:'Name, email and password are required'},{status:400});
+    if (!full_name) return respond({error:'Name is required'},{status:400});
+    if (action === 'create' && (!email || password.length < 8)) return respond({error:'Name, email and password are required'},{status:400});
+    if (!['create','update'].includes(action)) return respond({error:'Invalid action'},{status:400});
     if (!ROLES.includes(role)) return respond({error:'Invalid role'},{status:400});
     if (callerRole === 'CENTER_MANAGER') {
       if (role === 'SUPER_ADMIN') return respond({error:'Center Managers cannot create Super Admins'},{status:403});
@@ -69,6 +72,28 @@ Deno.serve(async (req) => {
       centerId=center.id;
     }
     if (role === 'HOSPITAL_USER' && !hospital_id) return respond({error:'Hospital user must be linked to a hospital'},{status:400});
+
+    if (action === 'update') {
+      const userId = String(body.user_id || '');
+      if (!userId || userId === caller.id) return respond({error:'Invalid user'},{status:400});
+      const { data:target, error:targetError } = await admin.from('ops_staff')
+        .select('id,center_id').eq('id',userId).maybeSingle();
+      if (targetError) throw targetError;
+      if (!target) return respond({error:'User not found'},{status:404});
+      if (callerRole === 'CENTER_MANAGER' && target.center_id !== staff.center_id) return respond({error:'User is outside your center'},{status:403});
+      if (callerRole === 'CENTER_MANAGER' && role === 'SUPER_ADMIN') return respond({error:'Center Managers cannot assign Super Admin'},{status:403});
+      const targetCenterId = callerRole === 'CENTER_MANAGER' ? staff.center_id : (forcedCenterId || null);
+      const targetScope = callerRole === 'CENTER_MANAGER' ? staff.scope : (scope || 'All centers');
+      const { error:updateAuthError } = await admin.auth.admin.updateUserById(userId,{user_metadata:{full_name,role}});
+      if (updateAuthError) throw updateAuthError;
+      const { error:updateStaffError } = await admin.from('ops_staff').update({
+        full_name, role, scope:targetScope, center_id:targetCenterId,
+        hospital_id:role === 'HOSPITAL_USER' ? hospital_id : null,
+        active:body.active !== false
+      }).eq('id',userId);
+      if (updateStaffError) throw updateStaffError;
+      return respond({id:userId,updated:true});
+    }
 
     const { data, error:createError } = await admin.auth.admin.createUser({
       email,
