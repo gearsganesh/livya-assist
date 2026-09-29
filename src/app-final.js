@@ -337,7 +337,17 @@ function newUser(id=''){
 async function saveUser(id){
   if(!manager())return toast('Manager access required');
   if(id){
-    const r=await supabase.from('ops_staff').update({full_name:$('un').value.trim(),role:$('ur').value,center_id:$('uc').value||null,hospital_id:$('uh').value||null,active:$('ua').value==='true'}).eq('id',id);if(r.error)throw r.error;
+    const r=await supabase.functions.invoke('admin-create-user',{body:{
+      action:'update',user_id:id,full_name:$('un').value.trim(),role:$('ur').value,
+      scope:S.staff.scope||'All centers',center_id:$('uc').value||null,hospital_id:$('uh').value||null,
+      active:$('ua').value==='true'
+    }});
+    if(r.error){
+      let msg=r.data?.error||r.error.message;
+      try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){}
+      throw new Error(msg);
+    }
+    if(r.data?.error)throw new Error(r.data.error);
   }else{
     const password=$('up').value;if(password.length<8)return toast('Use an 8+ character password');
     const centerId=$('uc').value||null;
@@ -345,7 +355,7 @@ async function saveUser(id){
     const r=await supabase.functions.invoke('admin-create-user',{body:{full_name:$('un').value,email:$('ue').value.trim().toLowerCase(),password,role:$('ur').value,scope:centerName,center_id:centerId,hospital_id:$('uh').value||null}});
     if(r.error){
       let msg=r.data?.error||r.error.message;
-      try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){ }
+      try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){}
       throw new Error(msg);
     }
     if(r.data?.error)throw new Error(r.data.error);
@@ -416,8 +426,9 @@ function patientProfile(){
 async function savePatientProfile(){
   const d={full_name:$('pfname').value.trim(),phone:$('pfphone').value.trim(),city:$('pfcity').value.trim(),preferred_language:$('pflang').value,notes:$('pfnotes').value.trim()||null};
   if(!d.full_name)return toast('Name is required');
-  const r=await supabase.from('ops_patients').update(d).eq('id',S.patient.id);if(r.error)throw r.error;
-  Object.assign(S.patient,d);closeModal();render();toast('Profile updated');
+  const r=await supabase.rpc('ops_update_patient_profile',{p_full_name:d.full_name,p_phone:d.phone,p_city:d.city,p_preferred_language:d.preferred_language,p_notes:d.notes});
+  if(r.error)throw r.error;
+  Object.assign(S.patient,r.data||d);closeModal();render();toast('Profile updated');
 }
 function patientNewConcierge(){
   modal('Request concierge service','<div class="formgrid">'+Sel('Case','pcase',D.cases.filter(c=>c.patient_id===S.patient.id),D.cases.find(c=>c.patient_id===S.patient.id)?.id,x=>({value:x.id,label:caseLabel(x.id)}))+Sel('Service','ptype',CONCIERGE_TYPES,'OTHER')+F('Title','ptitle','text')+TA('Details','pdetail')+F('Requested date','pwhen','date')+'</div>','savePatientConcierge()');
@@ -496,6 +507,9 @@ async function openCase(caseId){
   const caseColumns=(role()==='HOSPITAL_USER'||S.patient)?'id,case_code,patient_id,center_id,hospital_id,specialty,procedure,priority,status,estimated_value,currency,created_at,updated_at':'*';
   const cr=await supabase.from('ops_cases').select(caseColumns).eq('id',caseId).maybeSingle();if(cr.error)throw cr.error;if(!cr.data)throw new Error('Case not found');
   const c=cr.data,ids=[caseId];
+  const isPatientPortal=!!S.patient;
+  const isHospitalPortal=role()==='HOSPITAL_USER';
+  const empty={data:[],error:null};
   const [pr,ce,doq,qu,it,ap,co,bi,ta,me]=await Promise.all([
     supabase.from('ops_patients').select('*').eq('id',c.patient_id).maybeSingle(),
     supabase.from('ops_case_events').select('*').eq('case_id',caseId).order('created_at',{ascending:false}),
@@ -503,9 +517,9 @@ async function openCase(caseId){
     supabase.from('ops_quotations').select('*').eq('case_id',caseId).order('created_at',{ascending:false}),
     supabase.from('ops_itineraries').select('*').eq('case_id',caseId).maybeSingle(),
     supabase.from('ops_appointments').select('*').eq('case_id',caseId).order('appointment_date'),
-    supabase.from('ops_concierge').select('*').eq('case_id',caseId).order('created_at',{ascending:false}),
-    supabase.from('ops_billing').select('*').eq('case_id',caseId).order('created_at',{ascending:false}),
-    supabase.from('ops_tasks').select('*').eq('case_id',caseId).order('due_date'),
+    isHospitalPortal?empty:supabase.from('ops_concierge').select('*').eq('case_id',caseId).order('created_at',{ascending:false}),
+    isPatientPortal?supabase.from('ops_billing').select('*').eq('case_id',caseId).in('type',['CONCIERGE','ANCILLARY']).order('created_at',{ascending:false}):isHospitalPortal?empty:supabase.from('ops_billing').select('*').eq('case_id',caseId).order('created_at',{ascending:false}),
+    (isPatientPortal||isHospitalPortal)?empty:supabase.from('ops_tasks').select('*').eq('case_id',caseId).order('due_date'),
     supabase.from('ops_case_messages').select('*').eq('case_id',caseId).order('created_at')
   ]);
   [pr,ce,doq,qu,it,ap,co,bi,ta,me].forEach(x=>{if(x.error)throw x.error});
