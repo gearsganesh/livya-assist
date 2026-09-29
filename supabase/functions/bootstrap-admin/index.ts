@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const admin = createClient(url, key, { auth:{persistSession:false,autoRefreshToken:false} });
     const body = await req.json().catch(()=>({}));
     if (body.action === 'status') {
-      const { count, error } = await admin.from('ops_staff').select('id',{count:'exact',head:true}).eq('role','Super admin');
+      const { count, error } = await admin.from('ops_staff').select('id',{count:'exact',head:true}).eq('role','SUPER_ADMIN');
       if (error) throw error;
       return respond({needs_setup:(count||0)===0});
     }
@@ -47,14 +47,14 @@ Deno.serve(async (req) => {
     if (userError || !user) return respond({error:'Unauthorized'},{status:401});
     const { data:staff, error:staffError } = await caller.from('ops_staff').select('role,active').eq('id',user.id).maybeSingle();
     if (staffError) throw staffError;
-    if (!staff?.active || staff.role !== 'Super admin') return respond({error:'Forbidden'},{status:403});
+    if (!staff?.active || staff.role !== 'SUPER_ADMIN') return respond({error:'Forbidden'},{status:403});
     const full_name = String(body.full_name || '').trim();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     if (!full_name || !email || password.length < 8) return respond({error:'Name, email and password are required'},{status:400});
     const { data, error:createError } = await admin.auth.admin.createUser({email,password,email_confirm:true,user_metadata:{full_name}});
     if (createError) throw createError;
-    const { error:staffError2 } = await admin.from('ops_staff').insert({id:data.user.id,full_name,email,role:'Super admin',scope:'All centers',active:true});
+    const { error:staffError2 } = await admin.from('ops_staff').insert({id:data.user.id,full_name,email,role:'SUPER_ADMIN',scope:'All centers',active:true});
     if (staffError2) { await admin.auth.admin.deleteUser(data.user.id); throw staffError2; }
     return respond({id:data.user.id});
   } catch(e) { return respond({error:e?.message||'Unable to create initial administrator'},{status:400}); }
