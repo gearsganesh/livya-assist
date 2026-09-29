@@ -56,7 +56,7 @@ using (
   auth.uid()=id
   or private.ops_is_super_admin()
   or (
-    upper(private.ops_role())='CENTER_MANAGER'
+    upper(public.ops_role())='CENTER_MANAGER'
     and center_id is not null
     and private.ops_can_access_center(center_id)
   )
@@ -68,7 +68,7 @@ on public.ops_patients
 for select
 to authenticated
 using (
-  ops_role()='HOSPITAL_USER'
+  public.ops_role()='HOSPITAL_USER'
   and exists (
     select 1
     from public.ops_cases c
