@@ -585,3 +585,83 @@ main>header{
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}
 }
+
+
+/* =========================================================
+   LIVYA FLUID BACKGROUND + 10% GLASS DASHBOARD
+   ========================================================= */
+body{
+  background:
+    radial-gradient(70vw 52vw at 8% 8%,rgba(255,255,255,.95),transparent 62%),
+    radial-gradient(58vw 48vw at 88% 20%,rgba(214,214,214,.52),transparent 65%),
+    radial-gradient(55vw 55vw at 82% 88%,rgba(255,255,255,.82),transparent 64%),
+    linear-gradient(135deg,#d9d9d8 0%,#f7f7f6 42%,#d2d2d1 100%);
+}
+body::before{
+  background:
+    radial-gradient(34% 28% at 22% 26%,rgba(255,255,255,.92),transparent 72%),
+    radial-gradient(32% 44% at 67% 18%,rgba(255,255,255,.68),transparent 70%),
+    radial-gradient(42% 40% at 83% 78%,rgba(165,165,165,.24),transparent 72%);
+  filter:blur(24px);
+}
+body::after{
+  width:62vw;
+  height:76vh;
+  right:-20vw;
+  bottom:-31vh;
+  background:linear-gradient(145deg,rgba(255,255,255,.52),rgba(120,120,120,.10));
+  box-shadow:
+    inset 30px 30px 65px rgba(255,255,255,.55),
+    inset -35px -35px 75px rgba(70,70,70,.09);
+}
+
+/* Keep the dashboard itself translucent. The background remains visible through it. */
+.app{
+  background:rgba(255,255,255,.02);
+}
+main{
+  background:transparent;
+}
+.panel,.table,.cards>button,.centergrid>div{
+  background:rgba(255,255,255,.10);
+  border-color:rgba(255,255,255,.58);
+  box-shadow:0 16px 48px rgba(30,25,25,.08),inset 0 1px 0 rgba(255,255,255,.42);
+  backdrop-filter:blur(14px) saturate(115%);
+  -webkit-backdrop-filter:blur(14px) saturate(115%);
+}
+.panel:hover,.table:hover,.cards>button:hover,.centergrid>div:hover{
+  background:rgba(255,255,255,.14);
+  box-shadow:0 22px 58px rgba(30,25,25,.12),inset 0 1px 0 rgba(255,255,255,.52);
+}
+.cards>button{
+  transform:translateY(0);
+}
+.cards>button:hover{transform:translateY(-3px)}
+
+/* Dashboard text stays exactly as the existing design, with a tiny contrast lift. */
+.head h1,.panel h2,th,td,.cards b,.cards span,.cards small{
+  text-shadow:0 1px 1px rgba(255,255,255,.22);
+}
+
+/* Keep the table header subtle rather than opaque. */
+th{background:rgba(255,255,255,.16)}
+.table tbody tr:hover{background:rgba(255,255,255,.10)}
+
+/* Fluid glass login background, matching the supplied folded-paper reference. */
+.auth{
+  background:
+    radial-gradient(55vw 50vh at 10% 8%,rgba(255,255,255,.96),transparent 65%),
+    radial-gradient(50vw 55vh at 85% 84%,rgba(195,195,195,.34),transparent 66%),
+    linear-gradient(135deg,#dcdcdc 0%,#f8f8f7 48%,#d3d3d2 100%);
+}
+.authcard{
+  background:rgba(255,255,255,.72);
+  backdrop-filter:blur(24px) saturate(125%);
+  -webkit-backdrop-filter:blur(24px) saturate(125%);
+}
+
+/* Slightly translucent patient portal surfaces too. */
+.portal .welcome,.portal .cards>div{
+  background:rgba(255,255,255,.10);
+  border-color:rgba(255,255,255,.58);
+}
