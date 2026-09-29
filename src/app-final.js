@@ -632,13 +632,13 @@ async function patientAccount(id){
   const p=D.patients.find(x=>x.id===id);if(!p)return;
   const action=p.app_user_id?(p.portal_enabled?'disable':'enable'):'create';
   if(action==='create'){
-    const form=F('Login email','pae','email',p.email)+F('Password','pap','password');
-    const hasEmail=!!p.email;
-    const saveAction=hasEmail?'managePatientAccount(\\''+id+'\\',\\'create\\')':'managePatientAccount(\\''+id+'\\',\\'create\\')';
-    modal('Patient login',form+'<p class="login-help">If this email already has a LIVYA login, use <b>Link existing login</b> below.</p><div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\'link\\'))">Link existing login</button></div>',saveAction);
+    const form=F('Login email','pae','email',p.email)+F('Password','pap','password')+
+      '<p class="login-help">If this email already has a LIVYA login, use <b>Link existing login</b> below.</p>'+
+      '<div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\''+id+'\',\'link\'))">Link existing login</button></div>';
+    modal('Patient login',form,'managePatientAccount(\''+id+'\',\'create\')');
     return;
   }
-  const form='<p>'+esc(p.full_name)+'</p><button class="primary" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\''+action+'\\')">'+(action==='enable'?'Enable login':'Disable login')+'</button>';
+  const form='<p>'+esc(p.full_name)+'</p><button class="primary" onclick="run(()=>managePatientAccount(\''+id+'\',\''+action+'\'))">'+(action==='enable'?'Enable login':'Disable login')+'</button>';
   modal('Patient login',form,'closeModal()');
 }
 async function managePatientAccount(id,action){
