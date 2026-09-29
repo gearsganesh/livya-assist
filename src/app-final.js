@@ -399,22 +399,34 @@ async function savePatientConcierge(){
 async function hospitalPortal(){
   const hid=S.staff?.hospital_id;
   if(!hid)return '<div class="auth"><div class="authcard"><h2>Hospital account setup required</h2><p>This account is not linked to a hospital.</p><button onclick="logout()">Sign out</button></div></div>';
-  const cr=await supabase.from('ops_cases').select('*').eq('hospital_id',hid).order('created_at',{ascending:false});if(cr.error)throw cr.error;
-  const cases=cr.data||[],ids=cases.map(c=>c.id),idsOr=['00000000-0000-0000-0000-000000000000',...ids];
+  const cr=await supabase.from('ops_cases').select('*').eq('hospital_id',hid).order('created_at',{ascending:false});
+  if(cr.error)throw cr.error;
+  const cases=cr.data||[],ids=cases.map(c=>c.id);
   const [qr,ar,dr,br]=await Promise.all([
     supabase.from('ops_quotations').select('*').eq('hospital_id',hid).order('created_at',{ascending:false}),
-    supabase.from('ops_appointments').select('*').in('case_id',idsOr).order('appointment_date'),
-    supabase.from('ops_documents').select('*').in('case_id',idsOr).eq('visible_to_hospital',true).order('created_at',{ascending:false}),
+    ids.length?supabase.from('ops_appointments').select('*').in('case_id',ids).order('appointment_date'):Promise.resolve({data:[],error:null}),
+    ids.length?supabase.from('ops_documents').select('*').in('case_id',ids).eq('visible_to_hospital',true).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null}),
     supabase.from('ops_billing').select('*').eq('hospital_id',hid).eq('type','HOSPITAL_COMMISSION').order('created_at',{ascending:false})
   ]);
-  [qr,ar,dr,br].forEach(x=>{if(x.error)throw x.error});
+  for(const x of [qr,ar,dr,br])if(x.error)throw x.error;
+  const quotes=qr.data||[],appointments=ar.data||[],docs=dr.data||[],billing=br.data||[];
+  const caseRows=cases.map(c=>{
+    const actions=[];
+    if(['TRAVEL_PLANNED','IN_TREATMENT'].includes(c.status))actions.push('<button onclick="hospitalMoveCase(\\''+c.id+'\\',\\'IN_TREATMENT\\')">Start treatment</button>');
+    if(c.status==='IN_TREATMENT')actions.push('<button onclick="hospitalMoveCase(\\''+c.id+'\\',\\'DISCHARGED\\')">Discharge</button>');
+    actions.push('<button onclick="hospitalQuote(\\''+c.id+'\\')">Quotation</button>');
+    actions.push('<button onclick="openCase(\\''+c.id+'\\')">Open</button>');
+    return '<div class="row"><b>'+esc(c.case_code)+'</b><span>'+esc(patient(c.patient_id))+' · '+esc(c.specialty||'')+'</span><small>'+label(c.status)+'</small>'+actions.join('')+'</div>';
+  }).join('');
+  const apptRows=appointments.map(a=>'<div class="row"><b>'+esc(patient(a.patient_id))+'</b><span>'+esc(a.title||'')+' · '+esc(a.doctor||'')+'</span><small>'+esc(a.appointment_date||'')+' '+esc(a.appointment_time||'')+' · '+label(a.status)+'</small></div>').join('');
+  const docRows=docs.map(d=>'<div class="row"><b>'+esc(d.file_name)+'</b><span>'+label(d.category)+'</span><button onclick="openDocument(\\''+esc(d.storage_path)+'\\')">Open</button></div>').join('');
+  const billRows=billing.map(b=>'<div class="row"><b>'+esc(b.invoice_number||'')+'</b><span>'+money(b.amount)+'</span><small>'+label(b.status)+' · Paid '+money(b.paid_amount)+'</small></div>').join('');
   return '<div class="portal"><header class="portal-head"><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Hospital Portal</small></section></div><button onclick="logout()">Sign out</button></header><main>'+
     '<section class="welcome"><div><small>PARTNER HOSPITAL</small><h1>Hospital operations</h1><p>'+esc(S.staff.full_name)+' · '+esc(S.staff.email||'')+'</p></div></section>'+
-    '<section class="cards"><div><small>REFERRALS</small><b>'+cases.length+'</b><span>Assigned cases</span></div><div><small>QUOTATIONS</small><b>'+(qr.data||[]).length+'</b><span>Submitted offers</span></div><div><small>APPOINTMENTS</small><b>'+(ar.data||[]).length+'</b><span>Care schedule</span></div><div><small>COMMISSION</small><b>'+money((br.data||[]).reduce((s,x)=>s+Number(x.amount||0)-Number(x.paid_amount||0),0))+'</b><span>Outstanding</span></div></section>'+
-    '<section class="panel"><h2>Cases</h2>'+cases.map(c=>'<div class="row"><b>'+esc(c.case_code)+'</b><span>'+esc(patient(c.patient_id))+' · '+esc(c.specialty||'')+'</span><small>'+label(c.status)+'</small>'+(['TRAVEL_PLANNED','IN_TREATMENT'].includes(c.status)?'<button onclick="hospitalMoveCase(\''+c.id+'\',\'IN_TREATMENT\')">Start treatment</button>':'')+(c.status==='IN_TREATMENT'?'<button onclick="hospitalMoveCase(\''+c.id+'\',\'DISCHARGED\')">Discharge</button>':'')+'<button onclick="hospitalQuote(\''+c.id+'\')">Quotation</button><button onclick="openCase(\''+c.id+'\')">Open</button></div>').join('')||'<div class="empty">No referrals.</div>')+'</section>'+
-    '<div class="two"><section class="panel"><h2>Appointments</h2>'+((ar.data||[]).map(a=>'<div class="row"><b>'+esc(patient(a.patient_id))+'</b><span>'+esc(a.title)+' · '+esc(a.doctor||'')+'</span><small>'+esc(a.appointment_date||'')+' '+esc(a.appointment_time||'')+' · '+label(a.status)+'</small></div>').join('')||'<div class="empty">No appointments.</div>')+'</section>'+
-    '<section class="panel"><h2>Documents</h2>'+((dr.data||[]).map(d=>'<div class="row"><b>'+esc(d.file_name)+'</b><span>'+label(d.category)+'</span><button onclick="openDocument(\''+esc(d.storage_path)+'\')">Open</button></div>').join('')||'<div class="empty">No documents.</div>')+'</section></div>'+
-    '<section class="panel"><h2>Commission invoices</h2>'+((br.data||[]).map(b=>'<div class="row"><b>'+esc(b.invoice_number||'')+'</b><span>'+money(b.amount)+'</span><small>'+label(b.status)+' · Paid '+money(b.paid_amount)+'</small></div>').join('')||'<div class="empty">No commission invoices.</div>')+'</section>'+
+    '<section class="cards"><div><small>REFERRALS</small><b>'+cases.length+'</b><span>Assigned cases</span></div><div><small>QUOTATIONS</small><b>'+quotes.length+'</b><span>Submitted offers</span></div><div><small>APPOINTMENTS</small><b>'+appointments.length+'</b><span>Care schedule</span></div><div><small>COMMISSION</small><b>'+money(billing.reduce((sum,x)=>sum+Number(x.amount||0)-Number(x.paid_amount||0),0))+'</b><span>Outstanding</span></div></section>'+
+    '<section class="panel"><h2>Cases</h2>'+(caseRows||'<div class="empty">No referrals.</div>')+'</section>'+
+    '<div class="two"><section class="panel"><h2>Appointments</h2>'+(apptRows||'<div class="empty">No appointments.</div>')+'</section><section class="panel"><h2>Documents</h2>'+(docRows||'<div class="empty">No documents.</div>')+'</section></div>'+
+    '<section class="panel"><h2>Commission invoices</h2>'+(billRows||'<div class="empty">No commission invoices.</div>')+'</section>'+
     '</main></div>';
 }
 async function hospitalMoveCase(id,status){
