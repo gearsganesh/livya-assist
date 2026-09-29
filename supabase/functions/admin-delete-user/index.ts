@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const { data:staff, error:staffError } = await callerClient.from('ops_staff')
       .select('role,active').eq('id',caller.id).maybeSingle();
     if (staffError) throw staffError;
-    if (!staff?.active || staff.role !== 'Super admin') return respond({error:'Forbidden'},{status:403});
+    if (!staff?.active || staff.role !== 'SUPER_ADMIN') return respond({error:'Forbidden'},{status:403});
 
     const {user_id} = await req.json();
     if (!user_id || user_id === caller.id) return respond({error:'Invalid user'},{status:400});
