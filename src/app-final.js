@@ -531,7 +531,7 @@ function hospitalQuote(caseId){
 }
 async function saveHospitalQuote(caseId){
   const c=D.cases.find(x=>x.id===caseId)||{};
-  const r=await supabase.rpc('ops_submit_hospital_quotation',{p_case_id:caseId,p_reference:$('hqref').value.trim(),p_amount:+$('hqamt').value||0,p_currency:c.currency||'AED',p_valid_until:$('hqvalid').value||null,p_notes:$('hqnotes').value.trim()});
+  const r=await supabase.rpc('ops_submit_hospital_quotation',{p_case_id:caseId,p_hospital_id:S.staff.hospital_id,p_reference:$('hqref').value.trim(),p_amount:+$('hqamt').value||0,p_currency:c.currency||'AED',p_valid_until:$('hqvalid').value||null,p_notes:$('hqnotes').value.trim()});
   if(r.error)throw r.error;
   closeModal();render();toast('Quotation submitted');
 }
@@ -634,7 +634,7 @@ async function openCase(caseId){
   window.saveCaseQuote=async cid=>{
     const amount=+$('qamt').value||0;
     if(role()==='HOSPITAL_USER'){
-      const r=await supabase.rpc('ops_submit_hospital_quotation',{p_case_id:cid,p_reference:$('qref').value.trim(),p_amount:amount,p_currency:c.currency||'AED',p_valid_until:$('qvalid').value||null,p_notes:$('qnotes').value.trim()});
+      const r=await supabase.rpc('ops_submit_hospital_quotation',{p_case_id:cid,p_hospital_id:$('qho').value||c.hospital_id,p_reference:$('qref').value.trim(),p_amount:amount,p_currency:c.currency||'AED',p_valid_until:$('qvalid').value||null,p_notes:$('qnotes').value.trim()});
       if(r.error)throw r.error;
     }else{
       const r=await supabase.from('ops_quotations').insert({case_id:cid,hospital_id:$('qho').value||null,reference:$('qref').value,amount,currency:c.currency||'AED',valid_until:$('qvalid').value||null,status:'DRAFT',notes:$('qnotes').value,created_by:S.user.id});
