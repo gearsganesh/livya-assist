@@ -55,6 +55,21 @@ Deno.serve(async (req) => {
     if (!full_name) return respond({error:'Name is required'},{status:400});
     if (action === 'create' && (!email || password.length < 8)) return respond({error:'Name, email and password are required'},{status:400});
     if (!['create','update'].includes(action)) return respond({error:'Invalid action'},{status:400});
+    if (action === 'reset_password') {
+      if (callerRole !== 'SUPER_ADMIN') return respond({error:'Only Super Admin can reset staff passwords'},{status:403});
+      const userId = String(body.user_id || '');
+      if (!userId || userId === caller.id) return respond({error:'Invalid user'},{status:400});
+      if (password.length < 8) return respond({error:'Use a password with at least 8 characters'},{status:400});
+      const { data: target, error: targetError } = await admin.from('ops_staff')
+        .select('id,role,active').eq('id',userId).maybeSingle();
+      if (targetError) throw targetError;
+      if (!target) return respond({error:'Staff user not found'},{status:404});
+      if (target.role === 'SUPER_ADMIN') return respond({error:'Use the account recovery flow for another Super Admin account'},{status:403});
+      const { error:resetError } = await admin.auth.admin.updateUserById(userId,{password});
+      if (resetError) throw resetError;
+      return respond({id:userId,reset:true});
+    }
+
     if (!ROLES.includes(role)) return respond({error:'Invalid role'},{status:400});
     if (callerRole === 'CENTER_MANAGER') {
       if (role === 'SUPER_ADMIN') return respond({error:'Center Managers cannot create Super Admins'},{status:403});
