@@ -379,7 +379,7 @@ async function deleteUser(id){
 
 function patientPortal(){
   const p=S.patient;
-  return supabase.from('ops_cases').select('*').eq('patient_id',p.id).then(async cr=>{
+  return supabase.from('ops_cases').select('id,case_code,patient_id,center_id,hospital_id,specialty,procedure,priority,status,estimated_value,currency,created_at,updated_at').eq('patient_id',p.id).then(async cr=>{
     if(cr.error)throw cr.error;
     const cases=cr.data||[],ids=cases.map(c=>c.id); D.cases=cases; D.patients=[p];
     const [ap,ti,co,bi,doq,msg]=await Promise.all([
