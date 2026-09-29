@@ -294,7 +294,7 @@ function commissionSlabs(){
     const gross=cs.reduce((sum,c)=>sum+Number(c.estimated_value||0),0);
     const inv=D.billing.filter(b=>b.hospital_id===h.id&&b.type==='HOSPITAL_COMMISSION'&&b.status!=='VOID');
     const commission=inv.reduce((sum,b)=>sum+Number(b.amount||0),0),collected=inv.reduce((sum,b)=>sum+Number(b.paid_amount||0),0);
-    return '<tr><td>'+esc(h.name)+'</td><td>Q'+(Math.floor(now.getMonth()/3)+1)+' '+now.getFullYear()+'</td><td>'+volume+'</td><td>'+rate+'%</td><td>'+money(gross,h.currency)+'</td><td>'+money(commission,h.currency)+'</td><td>'+money(collected,h.currency)+'</td></tr>';
+    return '<tr><td>'+esc(h.name)+'</td><td>Q'+(Math.floor(now.getMonth()/3)+1)+' '+now.getFullYear()+'</td><td>'+volume+'</td><td>'+rate+'%</td><td>'+moneySummary(cs.map(c=>({currency:c.currency,amount:c.estimated_value})))+'</td><td>'+moneySummary(inv)+'</td><td>'+moneySummary(inv.map(b=>({...b,amount:b.paid_amount})))+'</td></tr>';
   });
 }
 function newBilling(id=''){
