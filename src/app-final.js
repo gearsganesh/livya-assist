@@ -324,7 +324,7 @@ async function saveReferrer(id){
 
 function team(){
   const rows=scoped(D.staff).map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(roleLabel(x.role))+'</td><td>'+esc(center(x.center_id)||x.scope||'All centers')+'</td><td>'+esc(hospital(x.hospital_id)||'')+'</td><td>'+ (x.active?'Active':'Inactive')+'</td><td>'+(manager()?'<button onclick="editUser(\''+x.id+'\')">Edit</button> <button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')+'</td></tr>');
-  return table('Team & Centers',manager()?'newUser()':['NAME','EMAIL','ROLE','CENTER','HOSPITAL','STATUS','ACTIONS'],rows)+
+  return table('Team & Centers',manager()?'newUser()':null,['NAME','EMAIL','ROLE','CENTER','HOSPITAL','STATUS','ACTIONS'],rows)+
   '<section class="panel lower"><h2>Centers</h2>'+(superAdmin()?'<button class="primary" onclick="newCenter()">+ Add Center</button>':'')+'<div class="centergrid">'+D.centers.map(c=>'<div><b>'+esc(c.name)+'</b><span>'+esc(c.city||'')+' · '+esc(c.country||'')+'</span><span>'+esc(c.code||'')+' · '+esc(c.currency||'AED')+'</span>'+(superAdmin()?'<button onclick="newCenter(\''+c.id+'\')">Edit</button>':'')+'</div>').join('')+'</div></section>';
 }
 function newUser(id=''){
