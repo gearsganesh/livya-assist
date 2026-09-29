@@ -37,26 +37,38 @@ Deno.serve(async (req) => {
     if (callerError || !caller) return respond({error:'Unauthorized'},{status:401});
 
     const { data: staff, error: staffError } = await admin.from('ops_staff')
-      .select('role,scope,active').eq('id', caller.id).maybeSingle();
+      .select('role,scope,center_id,active').eq('id', caller.id).maybeSingle();
     if (staffError) throw staffError;
-    if (!staff?.active || staff.role !== 'SUPER_ADMIN') return respond({error:'Forbidden'},{status:403});
+    const callerRole = String(staff?.role || '').toUpperCase();
+    if (!staff?.active || !['SUPER_ADMIN','CENTER_MANAGER'].includes(callerRole)) return respond({error:'Forbidden'},{status:403});
 
     const body = await req.json();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     const full_name = String(body.full_name || '').trim();
     const role = String(body.role || 'COORDINATOR');
-    const scope = String(body.scope || 'All centers');
+    let scope = String(body.scope || 'All centers');
+    let forcedCenterId = body.center_id ? String(body.center_id) : null;
     const hospital_id = body.hospital_id ? String(body.hospital_id) : null;
 
     if (!email || password.length < 8 || !full_name) return respond({error:'Name, email and password are required'},{status:400});
     if (!ROLES.includes(role)) return respond({error:'Invalid role'},{status:400});
-    if (scope !== 'All centers') {
-      const { data:center, error:centerError } = await admin.from('ops_centers')
-        .select('id').eq('name',scope).eq('active',true).maybeSingle();
+    if (callerRole === 'CENTER_MANAGER') {
+      if (role === 'SUPER_ADMIN') return respond({error:'Center Managers cannot create Super Admins'},{status:403});
+      if (!staff.center_id) return respond({error:'Center Manager is not assigned to a center'},{status:400});
+      const { data:center, error:centerError } = await admin.from('ops_centers').select('id,name').eq('id',staff.center_id).eq('active',true).maybeSingle();
+      if (centerError) throw centerError;
+      if (!center) return respond({error:'Manager center is invalid or inactive'},{status:400});
+      forcedCenterId=center.id; scope=center.name;
+    }
+    let centerId = forcedCenterId;
+    if (!centerId && scope !== 'All centers') {
+      const { data:center, error:centerError } = await admin.from('ops_centers').select('id').eq('name',scope).eq('active',true).maybeSingle();
       if (centerError) throw centerError;
       if (!center) return respond({error:'Invalid or inactive center scope'},{status:400});
+      centerId=center.id;
     }
+    if (role === 'HOSPITAL_USER' && !hospital_id) return respond({error:'Hospital user must be linked to a hospital'},{status:400});
 
     const { data, error:createError } = await admin.auth.admin.createUser({
       email,
@@ -72,7 +84,7 @@ Deno.serve(async (req) => {
       email,
       role,
       scope,
-      center_id: scope === 'All centers' ? null : (await admin.from('ops_centers').select('id').eq('name',scope).maybeSingle()).data?.id || null,
+      center_id: centerId || null,
       hospital_id: role === 'HOSPITAL_USER' ? hospital_id : null,
       active:true
     });
