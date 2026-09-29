@@ -620,7 +620,7 @@ function auth(){
   return '<div class="auth"><div class="authcard"><div class="brand livya-brand auth-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Coordination & Concierge</small></section></div><form onsubmit="login(event)"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<div class="password-field"><input id="password" type="password" autocomplete="current-password" required><button id="password-toggle" class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">Show</button></div></label><p id="err" class="error"></p><button class="primary" type="submit">Sign in</button></form><button type="button" onclick="forgotPassword()">Forgot password?</button></div></div>';
 }
 function recovery(){
-  return '<div class="auth"><div class="authcard"><div class="brand livya-brand auth-brand"><div class="livya-wordmark">LIVYA</div><section><small>Set a new password</small></section></div><form onsubmit="finishRecovery(event)"><label>New password<div class="password-field"><input id="new-password" type="password" minlength="8" autocomplete="new-password" required><button id="new-password-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\\'new-password\\',\\'new-password-toggle\\')">Show</button></div></label><label>Confirm password<input id="confirm-password" type="password" minlength="8" autocomplete="new-password" required></label><p id="recovery-err" class="error"></p><button class="primary" type="submit">Update password</button></form></div></div>';
+  return '<div class="auth"><div class="authcard"><div class="brand livya-brand auth-brand"><div class="livya-wordmark">LIVYA</div><section><small>Set a new password</small></section></div><form onsubmit="finishRecovery(event)"><label>New password<div class="password-field"><input id="new-password" type="password" minlength="8" autocomplete="new-password" required><button id="new-password-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\'new-password\',\'new-password-toggle\')">Show</button></div></label><label>Confirm password<input id="confirm-password" type="password" minlength="8" autocomplete="new-password" required></label><p id="recovery-err" class="error"></p><button class="primary" type="submit">Update password</button></form></div></div>';
 }
 function shell(body){
   $('app').innerHTML='<div class="app"><aside><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Coordination & Concierge</small></section></div><nav>'+NAV.map(n=>'<button class="'+(S.page===n?'active':'')+'" onclick="go(\''+n+'\')">'+esc(n)+'</button>').join('')+'</nav><footer><strong>'+esc(S.staff.full_name)+'</strong><small>'+esc(roleLabel(S.staff.role))+' · '+esc(S.staff.scope||center(S.staff.center_id)||'All centers')+'</small><button onclick="logout()">Sign out</button></footer></aside><main><header><strong>LIVYA OPS</strong><span>'+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' <i>'+esc((S.staff.full_name||'L')[0])+'</i><button class="mobile-signout" onclick="logout()" aria-label="Sign out">↪</button></span></header>'+body+'</main></div>';
@@ -700,8 +700,8 @@ async function patientAccount(id){
       F('Client email','pae','email',p.email)+
       F('Password (optional)','pap','password')+
       '<p class="login-help">Use a password to activate the client immediately. Leave it blank to send a secure password-setup email.</p>'+
-      '<div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\'link\\'))">Link existing login</button></div>';
-    modal('Client login',form,'managePatientAccount(\\''+id+'\\',\\'create\\')');
+      '<div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\''+id+'\',\'link\'))">Link existing login</button></div>';
+    modal('Client login',form,'managePatientAccount(\''+id+'\',\'create\')');
     return;
   }
 
@@ -710,9 +710,9 @@ async function patientAccount(id){
   const form=
     '<p><b>'+esc(p.full_name)+'</b><br><small>'+esc(p.email||'')+'</small></p>'+
     '<p class="login-help">Status: <b>'+status+'</b></p>'+
-    '<label>New password<div class="password-field"><input id="papr" type="password" autocomplete="new-password"><button id="papr-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\\'papr\\',\\'papr-toggle\\')">Show</button></div></label>'+
-    '<div class="account-actions"><button class="primary" type="button" onclick="run(()=>resetPatientPassword(\\''+id+'\\'))">Reset password</button></div>'+
-    '<div class="account-actions"><button type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\''+action+'\\'))">'+(action==='enable'?'Enable login':'Disable login')+'</button></div>';
+    '<label>New password<div class="password-field"><input id="papr" type="password" autocomplete="new-password"><button id="papr-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\'papr\',\'papr-toggle\')">Show</button></div></label>'+
+    '<div class="account-actions"><button class="primary" type="button" onclick="run(()=>resetPatientPassword(\''+id+'\'))">Reset password</button></div>'+
+    '<div class="account-actions"><button type="button" onclick="run(()=>managePatientAccount(\''+id+'\',\''+action+'\'))">'+(action==='enable'?'Enable login':'Disable login')+'</button></div>';
   modal('Client login',form,'closeModal()');
 }
 function toggleFieldPassword(inputId,buttonId){
