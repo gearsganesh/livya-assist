@@ -51,30 +51,33 @@ Deno.serve(async (req) => {
 
     if(action==='link'){
       const email=String(body.email||patient.email||'').trim().toLowerCase();
-      const password=String(body.password||'');
-      if(!email) return respond({error:'Patient email is required'},{status:400});
-      if(password.length<8) return respond({error:'An 8+ character password is required'},{status:400});
-      if(patient.app_user_id) return respond({error:'This patient already has a login account'},{status:409});
+      if(!email) return respond({error:'Client email is required'},{status:400});
+      if(patient.app_user_id) return respond({error:'This client already has a login account'},{status:409});
       const {data:existingUser,error:lookupError}=await admin.auth.admin.getUserByEmail(email);
-      if(lookupError) return respond({error:'No existing Auth account was found for this email'},{status:404});
-      if(!existingUser?.user) return respond({error:'No existing Auth account was found for this email'},{status:404});
-      const {error:updateAuthError}=await admin.auth.admin.updateUserById(existingUser.user.id,{
-        password,
-        user_metadata:{...(existingUser.user.user_metadata||{}),role:'Patient',patient_id:patient.id,full_name:patient.full_name}
+      if(lookupError || !existingUser?.user) return respond({error:'No existing Auth account was found for this email'},{status:404});
+      const existingId=existingUser.user.id;
+      const [{data:linkedStaff},{data:linkedPatient}]=await Promise.all([
+        admin.from('ops_staff').select('id').eq('id',existingId).maybeSingle(),
+        admin.from('ops_patients').select('id').eq('app_user_id',existingId).neq('id',patient.id).maybeSingle()
+      ]);
+      if(linkedStaff||linkedPatient) return respond({error:'This email is already linked to another LIVYA account.'},{status:409});
+      const {error:updateAuthError}=await admin.auth.admin.updateUserById(existingId,{
+        user_metadata:{...(existingUser.user_metadata||{}),role:'CLIENT',patient_id:patient.id,full_name:patient.full_name}
       });
       if(updateAuthError) throw updateAuthError;
       const {error:updatePatientError}=await admin.from('ops_patients').update({
-        email,app_user_id:existingUser.user.id,portal_enabled:true,updated_at:new Date().toISOString()
+        email,app_user_id:existingId,portal_enabled:true,updated_at:new Date().toISOString()
       }).eq('id',patient.id);
       if(updatePatientError) throw updatePatientError;
-      return respond({id:existingUser.user.id,enabled:true,linked:true});
+      return respond({id:existingId,enabled:true,linked:true});
     }
 
     if(action==='create'){
       const email=String(body.email||patient.email||'').trim().toLowerCase();
-      const password=String(body.password||'');
-      if(!email||password.length<8) return respond({error:'Patient email and an 8+ character password are required'},{status:400});
-      if(patient.app_user_id) return respond({error:'This patient already has a login account'},{status:409});
+      const suppliedPassword=String(body.password||'');
+      if(!email) return respond({error:'Client email is required'},{status:400});
+      if(suppliedPassword && suppliedPassword.length<8) return respond({error:'Use an 8+ character password'},{status:400});
+      if(patient.app_user_id) return respond({error:'This client already has a login account'},{status:409});
 
       const {data:existingUser,error:lookupError}=await admin.auth.admin.getUserByEmail(email);
       if(lookupError && !/not found/i.test(lookupError.message||'')) throw lookupError;
@@ -86,19 +89,20 @@ Deno.serve(async (req) => {
         ]);
         if(linkedStaff||linkedPatient) return respond({error:'This email is already linked to another LIVYA account.'},{status:409});
         const {error:updateAuthError}=await admin.auth.admin.updateUserById(existingId,{
-          password,
-          user_metadata:{...(existingUser.user.user_metadata||{}),role:'Patient',patient_id:patient.id,full_name:patient.full_name}
+          ...(suppliedPassword ? {password:suppliedPassword} : {}),
+          user_metadata:{...(existingUser.user_metadata||{}),role:'CLIENT',patient_id:patient.id,full_name:patient.full_name}
         });
         if(updateAuthError) throw updateAuthError;
         const {error:updatePatientError}=await admin.from('ops_patients').update({
           email,app_user_id:existingId,portal_enabled:true,updated_at:new Date().toISOString()
         }).eq('id',patient.id);
         if(updatePatientError) throw updatePatientError;
-        return respond({id:existingId,enabled:true,linked:true});
+        return respond({id:existingId,enabled:true,linked:true,requires_password_reset:!suppliedPassword});
       }
+      const generatedPassword=crypto.randomUUID()+'Aa1!';
       const {data,error:createError}=await admin.auth.admin.createUser({
-        email,password,email_confirm:true,
-        user_metadata:{role:'Patient',patient_id:patient.id,full_name:patient.full_name}
+        email,password:suppliedPassword||generatedPassword,email_confirm:true,
+        user_metadata:{role:'CLIENT',patient_id:patient.id,full_name:patient.full_name}
       });
       if(createError) throw createError;
 
@@ -109,7 +113,7 @@ Deno.serve(async (req) => {
         await admin.auth.admin.deleteUser(data.user.id);
         throw updateError;
       }
-      return respond({id:data.user.id,enabled:true});
+      return respond({id:data.user.id,enabled:true,requires_password_reset:!suppliedPassword});
     }
 
     if(!patient.app_user_id) return respond({error:'This patient does not have a login account'},{status:409});
