@@ -252,14 +252,16 @@ function newConcierge(id=''){
 async function saveConcierge(id){
   const d={patient_id:$('qp').value||null,case_id:$('qc').value||null,service_type:$('qtype').value,category:$('qtitle').value.trim()||null,details:$('qdetails').value.trim()||null,service_date:$('qwhen').value||null,price:+$('qprice').value||0,vendor_id:$('qvendor').value||null};
   if(!d.case_id)return toast('Case is required');
+  const selectedStatus=$('qstatus')?.value||'REQUESTED';
   if(!id){
     const r=await supabase.rpc('ops_create_concierge_request',{p_case_id:d.case_id,p_patient_id:d.patient_id,p_service_type:d.service_type,p_category:d.category,p_details:d.details,p_service_date:d.service_date,p_price:S.patient?0:d.price,p_vendor_id:d.vendor_id,p_currency:(D.cases.find(c=>c.id===d.case_id)?.currency)||'AED'});
     if(r.error)throw r.error;
   }else{
+    const existing=D.concierge.find(x=>x.id===id)||{};
     const r=await supabase.from('ops_concierge').update({patient_id:d.patient_id,case_id:d.case_id,service_type:d.service_type,category:d.category,details:d.details,service_date:d.service_date,vendor_id:d.vendor_id}).eq('id',id);
     if(r.error)throw r.error;
-    if(['DELIVERED','CANCELLED'].includes($('qstatus').value)){
-      const st=await supabase.rpc('ops_set_concierge_status',{p_id:id,p_status:$('qstatus').value,p_price:d.price});
+    if(selectedStatus!==String(existing.status||'REQUESTED').toUpperCase()){
+      const st=await supabase.rpc('ops_set_concierge_status',{p_id:id,p_status:selectedStatus,p_price:d.price});
       if(st.error)throw st.error;
     }
   }
