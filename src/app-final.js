@@ -412,14 +412,14 @@ async function hospitalPortal(){
   const quotes=qr.data||[],appointments=ar.data||[],docs=dr.data||[],billing=br.data||[];
   const caseRows=cases.map(c=>{
     const actions=[];
-    if(['TRAVEL_PLANNED','IN_TREATMENT'].includes(c.status))actions.push('<button onclick="hospitalMoveCase(\\''+c.id+'\\',\\'IN_TREATMENT\\')">Start treatment</button>');
-    if(c.status==='IN_TREATMENT')actions.push('<button onclick="hospitalMoveCase(\\''+c.id+'\\',\\'DISCHARGED\\')">Discharge</button>');
-    actions.push('<button onclick="hospitalQuote(\\''+c.id+'\\')">Quotation</button>');
-    actions.push('<button onclick="openCase(\\''+c.id+'\\')">Open</button>');
+    if(['TRAVEL_PLANNED','IN_TREATMENT'].includes(c.status))actions.push('<button onclick="hospitalMoveCase(\''+c.id+'\',\'IN_TREATMENT\')">Start treatment</button>');
+    if(c.status==='IN_TREATMENT')actions.push('<button onclick="hospitalMoveCase(\''+c.id+'\',\'DISCHARGED\')">Discharge</button>');
+    actions.push('<button onclick="hospitalQuote(\''+c.id+'\')">Quotation</button>');
+    actions.push('<button onclick="openCase(\''+c.id+'\')">Open</button>');
     return '<div class="row"><b>'+esc(c.case_code)+'</b><span>'+esc(patient(c.patient_id))+' · '+esc(c.specialty||'')+'</span><small>'+label(c.status)+'</small>'+actions.join('')+'</div>';
   }).join('');
   const apptRows=appointments.map(a=>'<div class="row"><b>'+esc(patient(a.patient_id))+'</b><span>'+esc(a.title||'')+' · '+esc(a.doctor||'')+'</span><small>'+esc(a.appointment_date||'')+' '+esc(a.appointment_time||'')+' · '+label(a.status)+'</small></div>').join('');
-  const docRows=docs.map(d=>'<div class="row"><b>'+esc(d.file_name)+'</b><span>'+label(d.category)+'</span><button onclick="openDocument(\\''+esc(d.storage_path)+'\\')">Open</button></div>').join('');
+  const docRows=docs.map(d=>'<div class="row"><b>'+esc(d.file_name)+'</b><span>'+label(d.category)+'</span><button onclick="openDocument(\''+esc(d.storage_path)+'\')">Open</button></div>').join('');
   const billRows=billing.map(b=>'<div class="row"><b>'+esc(b.invoice_number||'')+'</b><span>'+money(b.amount)+'</span><small>'+label(b.status)+' · Paid '+money(b.paid_amount)+'</small></div>').join('');
   return '<div class="portal"><header class="portal-head"><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Hospital Portal</small></section></div><button onclick="logout()">Sign out</button></header><main>'+
     '<section class="welcome"><div><small>PARTNER HOSPITAL</small><h1>Hospital operations</h1><p>'+esc(S.staff.full_name)+' · '+esc(S.staff.email||'')+'</p></div></section>'+
