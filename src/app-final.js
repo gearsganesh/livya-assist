@@ -215,7 +215,7 @@ async function saveTask(id){
 
 function concierge(){
   const rows=scoped(D.concierge).filter(x=>JSON.stringify(x).toLowerCase().includes(S.q.toLowerCase())).map(x=>'<tr><td>'+esc(patient(x.patient_id))+'</td><td>'+esc(caseLabel(x.case_id))+'</td><td>'+label(x.service_type)+'</td><td>'+label(x.status)+'</td><td>'+money(x.price||x.revenue)+'</td><td>'+esc(hospital(x.vendor_id)||D.vendors.find(v=>v.id===x.vendor_id)?.name||'')+'</td><td>'+(isStaff()?'<button onclick="editConcierge(\''+x.id+'\')">Edit</button>':'')+'</td></tr>');
-  return table('Concierge','newConcierge()',['PATIENT','CASE','SERVICE','STATUS','PRICE','VENDOR','ACTIONS'],'').replace('><tbody></tbody>','><tbody>'+rows.join('')+'</tbody>')+
+  return table('Concierge','newConcierge()',['PATIENT','CASE','SERVICE','STATUS','PRICE','VENDOR','ACTIONS'],rows)+
     '<section class="panel lower"><h2>Vendors</h2><button class="primary" onclick="newVendor()">+ Add Vendor</button><div class="centergrid">'+D.vendors.map(v=>'<div><b>'+esc(v.name)+'</b><span>'+esc(v.category||'')+' · '+esc(v.city||'')+'</span><span>'+esc(v.contact_phone||v.contact_email||'')+'</span><button onclick="editVendor(\''+v.id+'\')">Edit</button></div>').join('')+'</div></section>';
 }
 function newConcierge(id=''){
@@ -365,7 +365,7 @@ function patientPortal(){
   const p=S.patient;
   return supabase.from('ops_cases').select('*').eq('patient_id',p.id).then(async cr=>{
     if(cr.error)throw cr.error;
-    const cases=cr.data||[],ids=cases.map(c=>c.id);
+    const cases=cr.data||[],ids=cases.map(c=>c.id); D.cases=cases; D.patients=[p];
     const [ap,ti,co,bi,doq,msg]=await Promise.all([
       supabase.from('ops_appointments').select('*').in('case_id',ids.length?ids:['00000000-0000-0000-0000-000000000000']).order('appointment_date'),
       supabase.from('ops_itineraries').select('*').in('case_id',ids.length?ids:['00000000-0000-0000-0000-000000000000']),
