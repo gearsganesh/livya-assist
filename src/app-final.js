@@ -340,14 +340,21 @@ async function saveReferrer(id){
 }
 
 function team(){
-  const rows=scoped(D.staff).map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(roleLabel(x.role))+'</td><td>'+esc(center(x.center_id)||x.scope||'All centers')+'</td><td>'+esc(hospital(x.hospital_id)||'')+'</td><td>'+ (x.active?'Active':'Inactive')+'</td><td>'+(manager()?'<button onclick="editUser(\''+x.id+'\')">Edit</button> <button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')+'</td></tr>');
-  return table('Team & Centers',manager()?'newUser()':null,['NAME','EMAIL','ROLE','CENTER','HOSPITAL','STATUS','ACTIONS'],rows)+
+  const rows=scoped(D.staff).map(x=>{
+    const actions=manager()
+      ? '<button onclick="editUser(\''+x.id+'\')">Edit</button>'+
+        (superAdmin()&&x.id!==S.user?.id?'<button onclick="staffAccount(\''+x.id+'\')">Login</button>':'')+
+        (superAdmin()&&x.id!==S.user?.id?'<button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')
+      : '';
+    return '<tr><td><b>'+esc(x.full_name)+'</b><small>'+esc(x.email||'')+'</small></td><td>'+esc(roleLabel(x.role))+'</td><td>'+esc(center(x.center_id)||x.scope||'All centers')+'</td><td>'+esc(hospital(x.hospital_id)||'')+'</td><td>'+ (x.active?'Active':'Inactive')+'</td><td>'+actions+'</td></tr>';
+  }).join('');
+  return table('Team & Centers',manager()?'newUser()':null,['NAME / EMAIL','ROLE','CENTER','HOSPITAL','STATUS','ACTIONS'],rows)+
   '<section class="panel lower"><h2>Centers</h2>'+(superAdmin()?'<button class="primary" onclick="newCenter()">+ Add Center</button>':'')+'<div class="centergrid">'+D.centers.map(c=>'<div><b>'+esc(c.name)+'</b><span>'+esc(c.city||'')+' · '+esc(c.country||'')+'</span><span>'+esc(c.code||'')+' · '+esc(c.currency||'AED')+'</span>'+(superAdmin()?'<button onclick="newCenter(\''+c.id+'\')">Edit</button>':'')+'</div>').join('')+'</div></section>';
 }
 function newUser(id=''){
   if(!manager())return toast('Manager access required');
   const x=D.staff.find(s=>s.id===id)||{};
-  const availableRoles=superAdmin()?ROLES:ROLES.filter(r=>r!=='SUPER_ADMIN');
+  const availableRoles=superAdmin()?ROLES.filter(r=>r!=='PATIENT'):ROLES.filter(r=>!['SUPER_ADMIN','PATIENT'].includes(r));
   const centerField=superAdmin()?Sel('Center','uc',D.centers,x.center_id,x=>({value:x.id,label:x.name})):'<label>Center<input id="uc" value="'+esc(center(x.center_id)||S.staff.scope||'')+'" disabled></label>';
   modal(id?'Edit user':'New user','<div class="formgrid">'+F('Full name','un','text',x.full_name)+F('Email','ue','email',x.email)+(!id?F('Password','up','password',''):'')+Sel('Role','ur',availableRoles,x.role||'COORDINATOR',x=>({value:x,label:roleLabel(x)}))+centerField+Sel('Hospital','uh',D.hospitals,x.hospital_id,x=>({value:x.id,label:x.name}))+Sel('Status','ua',['true','false'],String(x.active!==false))+'</div>','saveUser(\''+id+'\')');
 }
@@ -719,6 +726,30 @@ function toggleFieldPassword(inputId,buttonId){
   const input=$(inputId),button=$(buttonId);if(!input||!button)return;
   const showing=input.type==='text';input.type=showing?'password':'text';button.textContent=showing?'Show':'Hide';
 }
+function staffAccount(id){
+  if(!superAdmin())return toast('Super Admin access required');
+  if(id===S.user?.id)return toast('Use Forgot password on the login screen to change your own password');
+  const x=D.staff.find(s=>s.id===id);
+  if(!x)return;
+  const form=
+    '<p><b>'+esc(x.full_name)+'</b><br><small>'+esc(x.email||'')+'</small></p>'+
+    '<p class="login-help">Reset this staff member’s Supabase login password. The current password is never shown.</p>'+
+    '<label>New password<div class="password-field"><input id="spr" type="password" autocomplete="new-password" minlength="8"><button id="spr-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\'spr\',\'spr-toggle\')">Show</button></div></label>';
+  modal('Staff login',form,'resetStaffPassword(\''+id+'\')');
+}
+async function resetStaffPassword(id){
+  if(!superAdmin())throw new Error('Super Admin access required');
+  const password=$('spr')?.value||'';
+  if(password.length<8)throw new Error('Use a password with at least 8 characters');
+  const r=await supabase.functions.invoke('admin-create-user',{body:{action:'reset_password',user_id:id,password}});
+  if(r.error){
+    let msg=r.data?.error||r.error.message;
+    try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){}
+    throw new Error(msg);
+  }
+  if(r.data?.error)throw new Error(r.data.error);
+  closeModal();toast('Staff password reset successfully');
+}
 async function resetPatientPassword(id){
   const password=$('papr')?.value||'';
   if(password.length<8)throw new Error('Use a password with at least 8 characters');
@@ -757,6 +788,6 @@ async function managePatientAccount(id,action){
   closeModal();await refresh();toast(action==='link'?'Client login linked':'Client login updated');
 }
 supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY'){S.recovery=true;S.user=session?.user||null;S.staff=S.patient=null;render();return}if(event==='SIGNED_OUT'){clearTimeout(sessionTimer);S.user=S.staff=S.patient=null;S.recovery=false;render()}});
-Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,finishRecovery,togglePassword,toggleFieldPassword,resetPatientPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
+Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,finishRecovery,togglePassword,toggleFieldPassword,resetPatientPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,staffAccount,resetStaffPassword,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
 render();
 (async()=>{try{const s=await supabase.auth.getSession();if(s.data.session&&isRecoveryLink()){S.recovery=true;S.user=s.data.session.user;render();return}if(s.data.session){await boot();return}}catch(e){console.error(e)}render()})();
