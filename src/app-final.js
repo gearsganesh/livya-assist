@@ -21,7 +21,7 @@ const INVOICE_STATUS=['DUE','PARTIAL','PAID','VOID'];
 const TASK_STATUS=['OPEN','IN_PROGRESS','DONE','CANCELLED'];
 const VISA=['NOT_REQUIRED','PENDING','APPLIED','APPROVED','REJECTED'];
 
-const S={user:null,staff:null,patient:null,page:'Dashboard',q:'',center:'All centers',loading:false,caseView:'board'};
+const S={user:null,staff:null,patient:null,page:'Dashboard',q:'',center:'All centers',loading:false,loadError:'',caseView:'board'};
 const D={centers:[],staff:[],patients:[],cases:[],appointments:[],concierge:[],tasks:[],billing:[],hospitals:[],referrers:[],vendors:[],dashboard:null,report:[]};
 let sessionTimer=null;
 
@@ -86,7 +86,9 @@ async function refresh(){
   await load();
 }
 async function load(){
-  S.loading=true;render();
+  S.loading=true;
+  S.loadError='';
+  render();
   const qs=[
     ['centers',supabase.from('ops_centers').select('*').order('name')],
     ['staff',supabase.from('ops_staff').select('id,full_name,email,role,scope,center_id,hospital_id,patient_id,active').order('full_name')],
@@ -100,13 +102,28 @@ async function load(){
     ['referrers',supabase.from('ops_referrers').select('*').order('name')],
     ['vendors',supabase.from('ops_vendors').select('*').order('name')]
   ];
-  const r=await Promise.all(qs.map(x=>x[1]));
-  r.forEach((x,i)=>{if(x.error)throw x.error;D[qs[i][0]]=x.data||[]});
-  const d=await supabase.rpc('ops_dashboard_summary');
-  if(!d.error)D.dashboard=d.data||{};
-  const rr=await supabase.rpc('ops_referral_report',{p_from:new Date(new Date().getFullYear(),0,1).toISOString().slice(0,10),p_to:new Date().toISOString().slice(0,10)});
-  D.report=rr.error?[]:(rr.data||[]);
-  S.loading=false;render();
+  try{
+    const r=await Promise.all(qs.map(async ([name,p])=>{
+      const x=await p;
+      if(x.error)throw new Error(name+': '+(x.error.message||String(x.error)));
+      return [name,x];
+    }));
+    r.forEach(([name,x])=>{D[name]=x.data||[]});
+    const d=await supabase.rpc('ops_dashboard_summary');
+    if(!d.error)D.dashboard=d.data||{};
+    const rr=await supabase.rpc('ops_referral_report',{p_from:new Date(new Date().getFullYear(),0,1).toISOString().slice(0,10),p_to:new Date().toISOString().slice(0,10)});
+    D.report=rr.error?[]:(rr.data||[]);
+    S.loading=false;
+    S.loadError='';
+    render();
+    return true;
+  }catch(e){
+    console.error('LIVYA load failed:',e);
+    S.loading=false;
+    S.loadError=e?.message||'Unable to load LIVYA data';
+    render();
+    return false;
+  }
 }
 
 function actionLabel(add){
@@ -602,7 +619,8 @@ function render(){
   if(S.patient){patientPortal().then(b=>$('app').innerHTML=b).catch(e=>$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Portal error</h2><p>'+esc(e.message)+'</p></div></div>');return}
   if(role()==='HOSPITAL_USER'){hospitalPortal().then(b=>$('app').innerHTML=b).catch(e=>$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Hospital portal error</h2><p>'+esc(e.message)+'</p></div></div>');return}
   if(!S.staff){$('app').innerHTML=auth();return}
-  if(S.loading){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Loading LIVYA OPS…</h2></div></div>';return}
+  if(S.loading){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Loading LIVYA OPS…</h2><p>Please wait while the workspace loads.</p></div></div>';return}
+  if(S.loadError){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>LIVYA OPS could not load</h2><p class="error">'+esc(S.loadError)+'</p><button class="primary" onclick="load()">Retry</button></div></div>';return}
   const body=S.page==='Dashboard'?dashboard():S.page==='Cases'?cases():S.page==='Patients'?patients():S.page==='Appointments'?appointments():S.page==='Concierge'?concierge():S.page==='Tasks'?tasks():S.page==='Billing'?billing():S.page==='Hospitals'?hospitals():S.page==='Referral network'?referrers():S.page==='Team & Centers'?team():dashboard();
   shell(body);
 }
