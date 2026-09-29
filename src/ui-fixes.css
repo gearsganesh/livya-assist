@@ -946,3 +946,116 @@ th{background:rgba(255,255,255,.16)}
   .authcard .auth-brand{margin-bottom:26px}
   .authcard .auth-brand .livya-wordmark{font-size:48px}
 }
+
+
+/* =========================================================
+   LOGIN FORM ALIGNMENT FIX
+   ========================================================= */
+.authcard{
+  width:min(460px,calc(100vw - 32px));
+  box-sizing:border-box;
+  padding:40px 38px 34px!important;
+}
+.authcard .auth-brand{
+  margin:0 auto 34px!important;
+  width:100%!important;
+  padding:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+}
+.authcard .auth-brand .livya-wordmark{
+  margin:0;
+  text-align:center;
+}
+.authcard .auth-brand section{
+  width:100%;
+  max-width:none!important;
+  margin:12px 0 0!important;
+  text-align:center!important;
+}
+.authcard .auth-brand section small{
+  display:block;
+  width:100%;
+  text-align:center;
+  font-size:13px;
+  line-height:1.4;
+}
+.authcard form{
+  width:100%;
+  margin:0;
+}
+.authcard form label{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  width:100%!important;
+  margin:0 0 18px!important;
+  gap:7px;
+  color:#59616a;
+  font-size:13px;
+  line-height:1.25;
+  text-align:left;
+}
+.authcard form label > input,
+.authcard form label > .password-field{
+  display:block;
+  width:100%!important;
+  box-sizing:border-box;
+}
+.authcard form label > input{
+  height:48px;
+  min-height:48px;
+  margin:0!important;
+  padding:11px 13px!important;
+}
+.password-field{
+  height:48px;
+  min-height:48px;
+}
+.password-field input{
+  height:48px!important;
+  min-height:48px!important;
+  box-sizing:border-box;
+  padding:11px 78px 11px 13px!important;
+}
+.password-toggle{
+  right:8px;
+  top:50%;
+  transform:translateY(-50%);
+  height:32px;
+  min-width:56px;
+  margin:0;
+}
+.authcard #err{
+  min-height:0;
+  margin:2px 0 10px;
+}
+.authcard form .primary{
+  width:100%!important;
+  height:48px;
+  min-height:48px;
+  margin:2px 0 0!important;
+  box-sizing:border-box;
+}
+.authcard > button:not(.primary){
+  display:block;
+  width:auto;
+  margin:7px auto 0;
+  padding:3px 0;
+  background:transparent;
+  border:0;
+  color:#252c33;
+  font-size:16px;
+  line-height:1.3;
+  text-align:center;
+}
+@media(max-width:720px){
+  .authcard{
+    width:min(440px,calc(100vw - 28px));
+    padding:32px 24px 28px!important;
+  }
+  .authcard .auth-brand{margin-bottom:28px!important}
+}
