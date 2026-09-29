@@ -620,7 +620,7 @@ function render(){
   if(role()==='HOSPITAL_USER'){hospitalPortal().then(b=>$('app').innerHTML=b).catch(e=>$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Hospital portal error</h2><p>'+esc(e.message)+'</p></div></div>');return}
   if(!S.staff){$('app').innerHTML=auth();return}
   if(S.loading){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>Loading LIVYA OPS…</h2><p>Please wait while the workspace loads.</p></div></div>';return}
-  if(S.loadError){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>LIVYA OPS could not load</h2><p class="error">'+esc(S.loadError)+'</p><button class="primary" onclick="load()">Retry</button></div></div>';return}
+  if(S.loadError){$('app').innerHTML='<div class="auth"><div class="authcard"><h2>LIVYA OPS could not load</h2><p class="error">'+esc(S.loadError)+'</p><button class="primary" onclick="window.location.reload()">Retry</button></div></div>';return}
   const body=S.page==='Dashboard'?dashboard():S.page==='Cases'?cases():S.page==='Patients'?patients():S.page==='Appointments'?appointments():S.page==='Concierge'?concierge():S.page==='Tasks'?tasks():S.page==='Billing'?billing():S.page==='Hospitals'?hospitals():S.page==='Referral network'?referrers():S.page==='Team & Centers'?team():dashboard();
   shell(body);
 }
