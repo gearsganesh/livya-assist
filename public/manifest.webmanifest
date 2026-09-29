@@ -10,6 +10,12 @@
   "theme_color": "#a71928",
   "icons": [
     {
+      "src": "/icons/livya-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icons/livya-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
