@@ -424,7 +424,7 @@ async function savePatientConcierge(){
 async function hospitalPortal(){
   const hid=S.staff?.hospital_id;
   if(!hid)return '<div class="auth"><div class="authcard"><h2>Hospital account setup required</h2><p>This account is not linked to a hospital.</p><button onclick="logout()">Sign out</button></div></div>';
-  const cr=await supabase.from('ops_cases').select('*').eq('hospital_id',hid).order('created_at',{ascending:false});
+  const cr=await supabase.from('ops_cases').select('id,case_code,patient_id,center_id,hospital_id,specialty,procedure,priority,status,estimated_value,currency,created_at,updated_at').eq('hospital_id',hid).order('created_at',{ascending:false});
   if(cr.error)throw cr.error;
   const cases=cr.data||[],ids=cases.map(c=>c.id);
   const [qr,ar,dr,br]=await Promise.all([
@@ -486,7 +486,8 @@ async function uploadDocument(caseId){
 async function openCase(caseId){
   const root=document.createElement('div');root.className='modal case-modal';root.innerHTML='<div class="dialog case-dialog"><button class="close" id="cwclose">×</button><div id="cw"><div class="empty">Loading case...</div></div></div>';$('app').appendChild(root);
   $('cwclose').onclick=()=>root.remove();
-  const cr=await supabase.from('ops_cases').select('*').eq('id',caseId).maybeSingle();if(cr.error)throw cr.error;if(!cr.data)throw new Error('Case not found');
+  const caseColumns=(role()==='HOSPITAL_USER'||S.patient)?'id,case_code,patient_id,center_id,hospital_id,specialty,procedure,priority,status,estimated_value,currency,created_at,updated_at':'*';
+  const cr=await supabase.from('ops_cases').select(caseColumns).eq('id',caseId).maybeSingle();if(cr.error)throw cr.error;if(!cr.data)throw new Error('Case not found');
   const c=cr.data,ids=[caseId];
   const [pr,ce,doq,qu,it,ap,co,bi,ta,me]=await Promise.all([
     supabase.from('ops_patients').select('*').eq('id',c.patient_id).maybeSingle(),
@@ -519,7 +520,7 @@ async function openCase(caseId){
     [e,d,q,i,a,o,b,t,m].forEach(x=>{if(x.error)throw x.error});
     Object.assign(data,{events:e.data||[],docs:d.data||[],quotes:q.data||[],itinerary:i.data||{},appointments:a.data||[],concierge:o.data||[],billing:b.data||[],tasks:t.data||[],messages:m.data||[]});
     if(data.quotes.length){const iq=await supabase.from('ops_quotation_items').select('*').in('quotation_id',data.quotes.map(q=>q.id));if(iq.error)throw iq.error;data.items=iq.data||[]}else data.items=[];
-    const fresh=await supabase.from('ops_cases').select('*').eq('id',caseId).single();if(fresh.error)throw fresh.error;Object.assign(c,fresh.data);
+    const fresh=await supabase.from('ops_cases').select(caseColumns).eq('id',caseId).single();if(fresh.error)throw fresh.error;Object.assign(c,fresh.data);
     renderWorkspace();
   }
   function renderWorkspace(){
