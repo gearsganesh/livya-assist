@@ -331,17 +331,24 @@ function newUser(id=''){
   if(!manager())return toast('Manager access required');
   const x=D.staff.find(s=>s.id===id)||{};
   const availableRoles=superAdmin()?ROLES:ROLES.filter(r=>r!=='SUPER_ADMIN');
-  const centerField=superAdmin()?Sel('Center','uc',D.centers,x.center_id,x=>({value:x.id,label:x.name})):'<label>Center<input id="uc_fixed" value="'+esc(center(x.center_id)||S.staff.scope||'')+'" disabled></label>';
+  const centerField=superAdmin()?Sel('Center','uc',D.centers,x.center_id,x=>({value:x.id,label:x.name})):'<label>Center<input id="uc" value="'+esc(center(x.center_id)||S.staff.scope||'')+'" disabled></label>';
   modal(id?'Edit user':'New user','<div class="formgrid">'+F('Full name','un','text',x.full_name)+F('Email','ue','email',x.email)+(!id?F('Password','up','password',''):'')+Sel('Role','ur',availableRoles,x.role||'COORDINATOR',x=>({value:x,label:roleLabel(x)}))+centerField+Sel('Hospital','uh',D.hospitals,x.hospital_id,x=>({value:x.id,label:x.name}))+Sel('Status','ua',['true','false'],String(x.active!==false))+'</div>','saveUser(\''+id+'\')');
 }
 async function saveUser(id){
-  if(!superAdmin())return toast('Super Admin access required');
+  if(!manager())return toast('Manager access required');
   if(id){
     const r=await supabase.from('ops_staff').update({full_name:$('un').value.trim(),role:$('ur').value,center_id:$('uc').value||null,hospital_id:$('uh').value||null,active:$('ua').value==='true'}).eq('id',id);if(r.error)throw r.error;
   }else{
     const password=$('up').value;if(password.length<8)return toast('Use an 8+ character password');
-    const r=await supabase.functions.invoke('admin-create-user',{body:{full_name:$('un').value,email:$('ue').value.trim().toLowerCase(),password,role:$('ur').value,scope:$('uc').value||'All centers',hospital_id:$('uh').value||null}});
-    if(r.error)throw new Error(r.data?.error||r.error.message);if(r.data?.error)throw new Error(r.data.error);
+    const centerId=$('uc').value||null;
+    const centerName=center(centerId)||S.staff.scope||'All centers';
+    const r=await supabase.functions.invoke('admin-create-user',{body:{full_name:$('un').value,email:$('ue').value.trim().toLowerCase(),password,role:$('ur').value,scope:centerName,center_id:centerId,hospital_id:$('uh').value||null}});
+    if(r.error){
+      let msg=r.data?.error||r.error.message;
+      try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){ }
+      throw new Error(msg);
+    }
+    if(r.data?.error)throw new Error(r.data.error);
   }
   closeModal();await refresh();toast('User saved');
 }
