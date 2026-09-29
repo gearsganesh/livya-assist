@@ -317,7 +317,7 @@ async function saveReferrer(id){
 }
 
 function team(){
-  const rows=scoped(D.staff).map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(roleLabel(x.role))+'</td><td>'+esc(center(x.center_id)||x.scope||'All centers')+'</td><td>'+esc(hospital(x.hospital_id)||'')+'</td><td>'+ (x.active?'Active':'Inactive')+'</td><td>'+(superAdmin()?'<button onclick="editUser(\''+x.id+'\')">Edit</button> <button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')+'</td></tr>');
+  const rows=scoped(D.staff).map(x=>'<tr><td>'+esc(x.full_name)+'</td><td>'+esc(x.email||'')+'</td><td>'+esc(roleLabel(x.role))+'</td><td>'+esc(center(x.center_id)||x.scope||'All centers')+'</td><td>'+esc(hospital(x.hospital_id)||'')+'</td><td>'+ (x.active?'Active':'Inactive')+'</td><td>'+(manager()?'<button onclick="editUser(\''+x.id+'\')">Edit</button> <button class="danger" onclick="deleteUser(\''+x.id+'\')">Delete</button>':'')+'</td></tr>');
   return table('Team & Centers',manager()?'newUser()':['NAME','EMAIL','ROLE','CENTER','HOSPITAL','STATUS','ACTIONS'],rows)+
   '<section class="panel lower"><h2>Centers</h2>'+(superAdmin()?'<button class="primary" onclick="newCenter()">+ Add Center</button>':'')+'<div class="centergrid">'+D.centers.map(c=>'<div><b>'+esc(c.name)+'</b><span>'+esc(c.city||'')+' · '+esc(c.country||'')+'</span><span>'+esc(c.code||'')+' · '+esc(c.currency||'AED')+'</span>'+(superAdmin()?'<button onclick="newCenter(\''+c.id+'\')">Edit</button>':'')+'</div>').join('')+'</div></section>';
 }
@@ -331,7 +331,7 @@ function newUser(id=''){
 async function saveUser(id){
   if(!manager())return toast('Manager access required');
   if(id){
-    const r=await supabase.from('ops_staff').update({full_name:$('un').value.trim(),role:$('ur').value,center_id:$('uc').value||null,hospital_id:$('uh').value||null,active:$('ua').value==='true'}).eq('id',id);if(r.error)throw r.error;
+    const r=await supabase.from('ops_staff').update({full_name:$('un').value.trim(),role:$('ur').value,center_id:superAdmin()?($('uc').value||null):S.staff.center_id,hospital_id:$('uh').value||null,active:$('ua').value==='true'}).eq('id',id);if(r.error)throw r.error;
   }else{
     const password=$('up').value;if(password.length<8)return toast('Use an 8+ character password');
     const r=await supabase.functions.invoke('admin-create-user',{body:{full_name:$('un').value,email:$('ue').value.trim().toLowerCase(),password,role:$('ur').value,scope:superAdmin()?($('uc').value||'All centers'):(S.staff.scope||center(S.staff.center_id)||'All centers'),center_id:superAdmin()?($('uc').value||null):S.staff.center_id,hospital_id:$('uh').value||null}});
