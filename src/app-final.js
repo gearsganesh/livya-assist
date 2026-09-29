@@ -631,12 +631,19 @@ async function patientAccount(id){
   if(!superAdmin())return toast('Super Admin access required');
   const p=D.patients.find(x=>x.id===id);if(!p)return;
   const action=p.app_user_id?(p.portal_enabled?'disable':'enable'):'create';
-  const form=action==='create'?F('Login email','pae','email',p.email)+F('Initial password','pap','password'):('<p>'+esc(p.full_name)+'</p><button class="primary" onclick="run(()=>managePatientAccount(\''+id+'\',\''+action+'\')">'+(action==='enable'?'Enable login':'Disable login')+'</button>');
-  modal('Patient login',form,action==='create'?'managePatientAccount(\''+id+'\',\'create\')':'closeModal()');
+  if(action==='create'){
+    const form=F('Login email','pae','email',p.email)+F('Password','pap','password');
+    const hasEmail=!!p.email;
+    const saveAction=hasEmail?'managePatientAccount(\\''+id+'\\',\\'create\\')':'managePatientAccount(\\''+id+'\\',\\'create\\')';
+    modal('Patient login',form+'<p class="login-help">If this email already has a LIVYA login, use <b>Link existing login</b> below.</p><div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\'link\\'))">Link existing login</button></div>',saveAction);
+    return;
+  }
+  const form='<p>'+esc(p.full_name)+'</p><button class="primary" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\''+action+'\\')">'+(action==='enable'?'Enable login':'Disable login')+'</button>';
+  modal('Patient login',form,'closeModal()');
 }
 async function managePatientAccount(id,action){
   const body={action,patient_id:id};
-  if(action==='create'){body.email=$('pae').value.trim().toLowerCase();body.password=$('pap').value;if(body.password.length<8)return toast('Use an 8+ character password')}
+  if(action==='create'||action==='link'){body.email=$('pae').value.trim().toLowerCase();body.password=$('pap').value;if(body.password.length<8)return toast('Use an 8+ character password')}
   const r=await supabase.functions.invoke('admin-patient-account',{body});
   if(r.error){
     let msg=r.data?.error||r.error.message;
