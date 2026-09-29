@@ -608,8 +608,16 @@ async function openCase(caseId){
   renderWorkspace();
 }
 
+function togglePassword(){
+  const input=$('password'),button=$('password-toggle');
+  if(!input||!button)return;
+  const showing=input.type==='text';
+  input.type=showing?'password':'text';
+  button.textContent=showing?'Show':'Hide';
+  button.setAttribute('aria-label',showing?'Show password':'Hide password');
+}
 function auth(){
-  return '<div class="auth"><div class="authcard"><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Coordination & Concierge</small></section></div><h1>Sign in</h1><p class="auth-subtitle">Staff & Client Portal</p><form onsubmit="login(event)"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><p id="err" class="error"></p><button class="primary" type="submit">Sign in</button></form><button onclick="forgotPassword()">Forgot password?</button></div></div>';
+  return '<div class="auth"><div class="authcard"><div class="brand livya-brand auth-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Coordination & Concierge</small></section></div><form onsubmit="login(event)"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<div class="password-field"><input id="password" type="password" autocomplete="current-password" required><button id="password-toggle" class="password-toggle" type="button" onclick="togglePassword()" aria-label="Show password">Show</button></div></label><p id="err" class="error"></p><button class="primary" type="submit">Sign in</button></form><button onclick="forgotPassword()">Forgot password?</button></div></div>';
 }
 function shell(body){
   $('app').innerHTML='<div class="app"><aside><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Coordination & Concierge</small></section></div><nav>'+NAV.map(n=>'<button class="'+(S.page===n?'active':'')+'" onclick="go(\''+n+'\')">'+esc(n)+'</button>').join('')+'</nav><footer><strong>'+esc(S.staff.full_name)+'</strong><small>'+esc(roleLabel(S.staff.role))+' · '+esc(S.staff.scope||center(S.staff.center_id)||'All centers')+'</small><button onclick="logout()">Sign out</button></footer></aside><main><header><strong>LIVYA OPS</strong><span>'+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' <i>'+esc((S.staff.full_name||'L')[0])+'</i><button class="mobile-signout" onclick="logout()" aria-label="Sign out">↪</button></span></header>'+body+'</main></div>';
@@ -699,6 +707,6 @@ async function managePatientAccount(id,action){
   closeModal();await refresh();toast(action==='link'?'Client login linked':'Client login updated');
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){clearTimeout(sessionTimer);S.user=S.staff=S.patient=null;render()}});
-Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
+Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,togglePassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
 render();
 (async()=>{try{const s=await supabase.auth.getSession();if(s.data.session){await boot();return}}catch(e){console.error(e)}render()})();
