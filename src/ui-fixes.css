@@ -872,3 +872,77 @@ th{background:rgba(255,255,255,.16)}
   .toolbar{margin-left:12px;margin-right:12px}
   .table{margin-left:12px;margin-right:12px}
 }
+
+
+/* =========================================================
+   LOGIN SCREEN REFINEMENT
+   Remove redundant headings, center the LIVYA identity, and
+   add an inline password visibility control.
+   ========================================================= */
+.authcard .auth-brand{
+  width:100%;
+  margin:0 0 30px;
+  padding:0!important;
+  display:flex!important;
+  flex-direction:column;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center;
+}
+.authcard .auth-brand .livya-wordmark{
+  text-align:center;
+}
+.authcard .auth-brand section{
+  margin-top:10px;
+  max-width:none;
+  text-align:center;
+}
+.authcard .auth-brand section small{
+  display:block;
+  text-align:center;
+  font-size:13px;
+  line-height:1.35;
+  color:#747b82;
+}
+.authcard form label{
+  display:block;
+  margin-bottom:14px;
+}
+.password-field{
+  position:relative;
+  width:100%;
+}
+.password-field input{
+  width:100%;
+  padding-right:78px!important;
+}
+.password-toggle{
+  position:absolute;
+  right:9px;
+  top:50%;
+  transform:translateY(-50%);
+  min-width:54px;
+  height:32px;
+  padding:4px 9px;
+  border:1px solid rgba(120,115,112,.18);
+  border-radius:7px;
+  background:rgba(255,255,255,.72);
+  color:#7b1019;
+  font-size:12px;
+  font-weight:600;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 3px 10px rgba(30,20,20,.05);
+}
+.password-toggle:hover{
+  background:rgba(255,255,255,.94);
+  border-color:rgba(173,11,24,.22);
+}
+.password-toggle:focus-visible{
+  outline:2px solid rgba(173,11,24,.28);
+  outline-offset:2px;
+}
+@media(max-width:720px){
+  .authcard .auth-brand{margin-bottom:26px}
+  .authcard .auth-brand .livya-wordmark{font-size:48px}
+}
