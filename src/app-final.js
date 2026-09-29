@@ -460,7 +460,7 @@ async function uploadDocument(caseId){
     const category=prompt('Document category: '+DOC_CATS.join(', '),'OTHER')||'OTHER';
     const path=caseId+'/'+crypto.randomUUID()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
     const up=await supabase.storage.from('case-documents').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});if(up.error)throw up.error;
-    const ins=await supabase.from('ops_documents').insert({case_id:caseId,category,file_name:file.name,mime_type:file.type||null,storage_path:path,uploaded_by:S.user.id,visible_to_patient:true,visible_to_hospital:true});
+    const ins=await supabase.from('ops_documents').insert({case_id:caseId,category,file_name:file.name,mime_type:file.type||null,storage_path:path,uploaded_by:S.user.id,visible_to_patient:true,visible_to_hospital:!S.patient});
     if(ins.error){await supabase.storage.from('case-documents').remove([path]);throw ins.error}
     toast('Document uploaded');openCase(caseId);
   };input.click();
