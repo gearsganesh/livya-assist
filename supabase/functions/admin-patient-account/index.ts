@@ -79,7 +79,22 @@ Deno.serve(async (req) => {
       const {data:existingUser,error:lookupError}=await admin.auth.admin.getUserByEmail(email);
       if(lookupError && !/not found/i.test(lookupError.message||'')) throw lookupError;
       if(existingUser?.user){
-        return respond({error:'This email already has a LIVYA login account. Use a different email or link the existing account to this patient.'},{status:409});
+        const existingId=existingUser.user.id;
+        const [{data:linkedStaff},{data:linkedPatient}]=await Promise.all([
+          admin.from('ops_staff').select('id').eq('id',existingId).maybeSingle(),
+          admin.from('ops_patients').select('id').eq('app_user_id',existingId).neq('id',patient.id).maybeSingle()
+        ]);
+        if(linkedStaff||linkedPatient) return respond({error:'This email is already linked to another LIVYA account.'},{status:409});
+        const {error:updateAuthError}=await admin.auth.admin.updateUserById(existingId,{
+          password,
+          user_metadata:{...(existingUser.user.user_metadata||{}),role:'Patient',patient_id:patient.id,full_name:patient.full_name}
+        });
+        if(updateAuthError) throw updateAuthError;
+        const {error:updatePatientError}=await admin.from('ops_patients').update({
+          email,app_user_id:existingId,portal_enabled:true,updated_at:new Date().toISOString()
+        }).eq('id',patient.id);
+        if(updatePatientError) throw updatePatientError;
+        return respond({id:existingId,enabled:true,linked:true});
       }
       const {data,error:createError}=await admin.auth.admin.createUser({
         email,password,email_confirm:true,
