@@ -55,6 +55,11 @@ Deno.serve(async (req) => {
       if(!email||password.length<8) return respond({error:'Patient email and an 8+ character password are required'},{status:400});
       if(patient.app_user_id) return respond({error:'This patient already has a login account'},{status:409});
 
+      const {data:existingUser,error:lookupError}=await admin.auth.admin.getUserByEmail(email);
+      if(lookupError && !/not found/i.test(lookupError.message||'')) throw lookupError;
+      if(existingUser?.user){
+        return respond({error:'This email already has a LIVYA login account. Use a different email or link the existing account to this patient.'},{status:409});
+      }
       const {data,error:createError}=await admin.auth.admin.createUser({
         email,password,email_confirm:true,
         user_metadata:{role:'Patient',patient_id:patient.id,full_name:patient.full_name}
