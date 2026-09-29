@@ -249,7 +249,7 @@ async function saveVendor(id){
 function billing(){
   const rows=scoped(D.billing).filter(x=>JSON.stringify(x).toLowerCase().includes(S.q.toLowerCase())).map(x=>'<tr><td>'+esc(x.invoice_number||x.invoice_no||'')+'</td><td>'+label(x.type)+'</td><td>'+esc(patient(x.patient_id)||hospital(x.hospital_id))+'</td><td>'+esc(caseLabel(x.case_id))+'</td><td>'+money(x.amount)+'</td><td>'+money(Number(x.paid_amount||0))+'</td><td>'+label(x.status)+'</td><td>'+(billingAccess()?'<button onclick="editBilling(\''+x.id+'\')">Edit</button> '+(Number(x.amount||0)>Number(x.paid_amount||0)&&x.status!=='VOID'?'<button onclick="recordPayment(\''+x.id+'\')">Payment</button>':''):'')+'</td></tr>');
   const rowsHtml=rows.join('');
-  return table('Billing','newBilling()',['INVOICE','TYPE','BILLED TO','CASE','AMOUNT','PAID','STATUS','ACTIONS'],rowsHtml)+
+  return table('Billing','newBilling()',['INVOICE','TYPE','BILLED TO','CASE','AMOUNT','PAID','STATUS','ACTIONS'],rows)+
     '<section class="panel lower"><h2>Commission settlements</h2><div class="table"><table><thead><tr><th>HOSPITAL</th><th>QUARTER</th><th>VOLUME</th><th>RATE</th><th>GROSS</th><th>COMMISSION</th><th>COLLECTED</th></tr></thead><tbody>'+commissionSlabs().join('')+'</tbody></table></div></section>';
 }
 function commissionSlabs(){
