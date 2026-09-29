@@ -637,7 +637,13 @@ async function patientAccount(id){
 async function managePatientAccount(id,action){
   const body={action,patient_id:id};
   if(action==='create'){body.email=$('pae').value.trim().toLowerCase();body.password=$('pap').value;if(body.password.length<8)return toast('Use an 8+ character password')}
-  const r=await supabase.functions.invoke('admin-patient-account',{body});if(r.error)throw new Error(r.data?.error||r.error.message);if(r.data?.error)throw new Error(r.data.error);
+  const r=await supabase.functions.invoke('admin-patient-account',{body});
+  if(r.error){
+    let msg=r.data?.error||r.error.message;
+    try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){}
+    throw new Error(msg);
+  }
+  if(r.data?.error)throw new Error(r.data.error);
   closeModal();await refresh();toast('Patient login updated');
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){clearTimeout(sessionTimer);S.user=S.staff=S.patient=null;render()}});
