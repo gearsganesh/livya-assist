@@ -680,8 +680,8 @@ async function patientAccount(id){
   }
   const form='<p>'+esc(p.full_name)+'</p>'+
     '<label>New password<div class="password-field"><input id="papr" type="password" autocomplete="new-password"><button id="papr-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\\'papr\\',\\'papr-toggle\\')">Show</button></div></label>'+
-    '<div class="account-actions"><button class="primary" type="button" onclick="run(()=>resetPatientPassword(\\''+id+'\\')">Reset password</button></div>'+
-    '<div class="account-actions"><button class="secondary" type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\''+action+'\\')">'+(action==='enable'?'Enable login':'Disable login')+'</button></div>';
+    '<div class="account-actions"><button class="primary" type="button" onclick="run(()=>resetPatientPassword(\\''+id+'\\'))">Reset password</button></div>'+
+    '<div class="account-actions"><button class="secondary" type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\''+action+'\\'))">'+(action==='enable'?'Enable login':'Disable login')+'</button></div>';
   modal('Client login',form,'closeModal()');
 }
 
