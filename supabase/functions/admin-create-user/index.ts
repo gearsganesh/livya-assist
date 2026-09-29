@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     const full_name = String(body.full_name || '').trim();
     const role = String(body.role || 'COORDINATOR');
     const scope = String(body.scope || 'All centers');
+    const hospital_id = body.hospital_id ? String(body.hospital_id) : null;
 
     if (!email || password.length < 8 || !full_name) return respond({error:'Name, email and password are required'},{status:400});
     if (!ROLES.includes(role)) return respond({error:'Invalid role'},{status:400});
@@ -72,6 +73,7 @@ Deno.serve(async (req) => {
       role,
       scope,
       center_id: scope === 'All centers' ? null : (await admin.from('ops_centers').select('id').eq('name',scope).maybeSingle()).data?.id || null,
+      hospital_id: role === 'HOSPITAL_USER' ? hospital_id : null,
       active:true
     });
     if (staffError2) {
