@@ -49,6 +49,27 @@ Deno.serve(async (req) => {
     if(patientError) throw patientError;
     if(!patient) return respond({error:'Patient not found'},{status:404});
 
+    if(action==='link'){
+      const email=String(body.email||patient.email||'').trim().toLowerCase();
+      const password=String(body.password||'');
+      if(!email) return respond({error:'Patient email is required'},{status:400});
+      if(password.length<8) return respond({error:'An 8+ character password is required'},{status:400});
+      if(patient.app_user_id) return respond({error:'This patient already has a login account'},{status:409});
+      const {data:existingUser,error:lookupError}=await admin.auth.admin.getUserByEmail(email);
+      if(lookupError) return respond({error:'No existing Auth account was found for this email'},{status:404});
+      if(!existingUser?.user) return respond({error:'No existing Auth account was found for this email'},{status:404});
+      const {error:updateAuthError}=await admin.auth.admin.updateUserById(existingUser.user.id,{
+        password,
+        user_metadata:{...(existingUser.user.user_metadata||{}),role:'Patient',patient_id:patient.id,full_name:patient.full_name}
+      });
+      if(updateAuthError) throw updateAuthError;
+      const {error:updatePatientError}=await admin.from('ops_patients').update({
+        email,app_user_id:existingUser.user.id,portal_enabled:true,updated_at:new Date().toISOString()
+      }).eq('id',patient.id);
+      if(updatePatientError) throw updatePatientError;
+      return respond({id:existingUser.user.id,enabled:true,linked:true});
+    }
+
     if(action==='create'){
       const email=String(body.email||patient.email||'').trim().toLowerCase();
       const password=String(body.password||'');
