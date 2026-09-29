@@ -392,7 +392,7 @@ function patientPortal(){
     ]);
     [ap,ti,co,bi,doq,msg].forEach(x=>{if(x.error)throw x.error});
     return '<div class="portal"><header class="portal-head"><div class="brand livya-brand"><div class="livya-wordmark">LIVYA</div><section><small>Patient Portal</small></section></div><button onclick="logout()">Sign out</button></header><main>'+
-      '<section class="welcome"><div><small>PATIENT PORTAL</small><h1>Welcome, '+esc(p.full_name)+'</h1><p>'+esc(p.email||S.user?.email||'')+' · '+esc(p.phone||'')+'</p></div></section>'+
+      '<section class="welcome"><div><small>PATIENT PORTAL</small><h1>Welcome, '+esc(p.full_name)+'</h1><p>'+esc(p.email||S.user?.email||'')+' · '+esc(p.phone||'')+'</p></div><button class="primary" onclick="patientProfile()">Edit profile</button></section>'+
       '<section class="cards"><div><small>ACTIVE CASES</small><b>'+cases.filter(c=>!['CLOSED','CANCELLED'].includes(c.status)).length+'</b><span>Your care journeys</span></div><div><small>APPOINTMENTS</small><b>'+(ap.data||[]).length+'</b><span>Upcoming and completed</span></div><div><small>OUTSTANDING</small><b>'+money((bi.data||[]).reduce((s,x)=>s+Number(x.amount||0)-Number(x.paid_amount||0),0))+'</b><span>Patient invoices</span></div><div><small>CONCIERGE</small><b>'+(co.data||[]).filter(x=>!['DELIVERED','CANCELLED'].includes(String(x.status).toUpperCase())).length+'</b><span>Open requests</span></div></section>'+
       '<div class="two"><section class="panel"><h2>My cases</h2>'+(cases.map(c=>'<div class="row"><b>'+esc(c.case_code)+'</b><span>'+esc(c.specialty||'')+' · '+esc(c.procedure||'')+'</span><small>'+label(c.status)+'</small><button onclick="openCase(\''+c.id+'\')">View journey</button></div>').join('')||'<div class="empty">No cases.</div>')+'</section>'+
       '<section class="panel"><h2>Appointments</h2>'+((ap.data||[]).map(a=>'<div class="row"><b>'+esc(a.title)+'</b><span>'+esc(a.doctor||'')+'</span><small>'+esc(a.appointment_date||'')+' '+esc(a.appointment_time||'')+' · '+label(a.status)+'</small></div>').join('')||'<div class="empty">No appointments.</div>')+'</section></div>'+
@@ -402,6 +402,15 @@ function patientPortal(){
       '<section class="panel"><h2>Documents</h2>'+((doq.data||[]).map(d=>'<div class="row"><b>'+esc(d.file_name)+'</b><span>'+label(d.category)+'</span><small>'+fmt(d.created_at)+'</small><button onclick="openDocument(\''+esc(d.storage_path)+'\')">Open</button></div>').join('')||'<div class="empty">No documents.</div>')+'</section>'+
       '</main></div>';
   });
+}
+function patientProfile(){
+  modal('My profile','<div class="formgrid">'+F('Full name','pfname','text',S.patient.full_name)+F('Phone','pfphone','text',S.patient.phone)+F('City','pfcity','text',S.patient.city)+Sel('Preferred language','pflang',['en','ar'],S.patient.preferred_language||'en')+TA('Notes','pfnotes',S.patient.notes)+'</div>','savePatientProfile()');
+}
+async function savePatientProfile(){
+  const d={full_name:$('pfname').value.trim(),phone:$('pfphone').value.trim(),city:$('pfcity').value.trim(),preferred_language:$('pflang').value,notes:$('pfnotes').value.trim()||null};
+  if(!d.full_name)return toast('Name is required');
+  const r=await supabase.from('ops_patients').update(d).eq('id',S.patient.id);if(r.error)throw r.error;
+  Object.assign(S.patient,d);closeModal();render();toast('Profile updated');
 }
 function patientNewConcierge(){
   modal('Request concierge service','<div class="formgrid">'+Sel('Case','pcase',D.cases.filter(c=>c.patient_id===S.patient.id),D.cases.find(c=>c.patient_id===S.patient.id)?.id,x=>({value:x.id,label:caseLabel(x.id)}))+Sel('Service','ptype',CONCIERGE_TYPES,'OTHER')+F('Title','ptitle','text')+TA('Details','pdetail')+F('Requested date','pwhen','date')+'</div>','savePatientConcierge()');
@@ -624,6 +633,6 @@ async function managePatientAccount(id,action){
   closeModal();await refresh();toast('Patient login updated');
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){clearTimeout(sessionTimer);S.user=S.staff=S.patient=null;render()}});
-Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge});
+Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
 render();
 (async()=>{try{const s=await supabase.auth.getSession();if(s.data.session){await boot();return}}catch(e){console.error(e)}render()})();
