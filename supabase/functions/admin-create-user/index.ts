@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const ROLES = ['Super admin','Coordinator','Finance','Center admin','Viewer'];
+const ROLES = ['SUPER_ADMIN','CENTER_MANAGER','COORDINATOR','CONCIERGE_AGENT','HOSPITAL_USER'];
 
 function respond(body: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body), {
@@ -39,13 +39,13 @@ Deno.serve(async (req) => {
     const { data: staff, error: staffError } = await admin.from('ops_staff')
       .select('role,scope,active').eq('id', caller.id).maybeSingle();
     if (staffError) throw staffError;
-    if (!staff?.active || staff.role !== 'Super admin') return respond({error:'Forbidden'},{status:403});
+    if (!staff?.active || staff.role !== 'SUPER_ADMIN') return respond({error:'Forbidden'},{status:403});
 
     const body = await req.json();
     const email = String(body.email || '').trim().toLowerCase();
     const password = String(body.password || '');
     const full_name = String(body.full_name || '').trim();
-    const role = String(body.role || 'Coordinator');
+    const role = String(body.role || 'COORDINATOR');
     const scope = String(body.scope || 'All centers');
 
     if (!email || password.length < 8 || !full_name) return respond({error:'Name, email and password are required'},{status:400});
@@ -71,6 +71,7 @@ Deno.serve(async (req) => {
       email,
       role,
       scope,
+      center_id: scope === 'All centers' ? null : (await admin.from('ops_centers').select('id').eq('name',scope).maybeSingle()).data?.id || null,
       active:true
     });
     if (staffError2) {
