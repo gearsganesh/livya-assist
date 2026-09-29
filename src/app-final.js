@@ -673,13 +673,33 @@ async function patientAccount(id){
   const action=p.app_user_id?(p.portal_enabled?'disable':'enable'):'create';
   if(action==='create'){
     const form=F('Client email','pae','email',p.email)+F('Password (optional)','pap','password')+
-      '<p class="login-help">Enter a password to activate the client immediately. Leave it blank to create the account and send a password-reset email.</p>'+
-      '<div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\''+id+'\',\'link\'))">Link existing login</button></div>';
-    modal('Client login',form,'managePatientAccount(\''+id+'\',\'create\')');
+      '<p class="login-help">Enter a password to activate the client immediately. Leave it blank to create the account and send a password-setup email.</p>'+
+      '<div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\'link\\'))">Link existing login</button></div>';
+    modal('Client login',form,'managePatientAccount(\\''+id+'\\',\\'create\\')');
     return;
   }
-  const form='<p>'+esc(p.full_name)+'</p><button class="primary" onclick="run(()=>managePatientAccount(\''+id+'\',\''+action+'\'))">'+(action==='enable'?'Enable login':'Disable login')+'</button>';
+  const form='<p>'+esc(p.full_name)+'</p>'+
+    '<label>New password<div class="password-field"><input id="papr" type="password" autocomplete="new-password"><button id="papr-toggle" class="password-toggle" type="button" onclick="toggleFieldPassword(\\'papr\\',\\'papr-toggle\\')">Show</button></div></label>'+
+    '<div class="account-actions"><button class="primary" type="button" onclick="run(()=>resetPatientPassword(\\''+id+'\\')">Reset password</button></div>'+
+    '<div class="account-actions"><button class="secondary" type="button" onclick="run(()=>managePatientAccount(\\''+id+'\\',\\''+action+'\\')">'+(action==='enable'?'Enable login':'Disable login')+'</button></div>';
   modal('Client login',form,'closeModal()');
+}
+
+function toggleFieldPassword(inputId,buttonId){
+  const input=$(inputId),button=$(buttonId);if(!input||!button)return;
+  const showing=input.type==='text';input.type=showing?'password':'text';button.textContent=showing?'Show':'Hide';
+}
+async function resetPatientPassword(id){
+  const password=$('papr')?.value||'';
+  if(password.length<8)throw new Error('Use a password with at least 8 characters');
+  const r=await supabase.functions.invoke('admin-patient-account',{body:{action:'reset',patient_id:id,password}});
+  if(r.error){
+    let msg=r.data?.error||r.error.message;
+    try{if(r.error.context){const detail=await r.error.context.json();msg=detail?.error||msg}}catch(_){}
+    throw new Error(msg);
+  }
+  if(r.data?.error)throw new Error(r.data.error);
+  closeModal();toast('Client password reset successfully');
 }
 async function managePatientAccount(id,action){
   const body={action,patient_id:id};
@@ -707,6 +727,6 @@ async function managePatientAccount(id,action){
   closeModal();await refresh();toast(action==='link'?'Client login linked':'Client login updated');
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){clearTimeout(sessionTimer);S.user=S.staff=S.patient=null;render()}});
-Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,togglePassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
+Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,togglePassword,toggleFieldPassword,resetPatientPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
 render();
 (async()=>{try{const s=await supabase.auth.getSession();if(s.data.session){await boot();return}}catch(e){console.error(e)}render()})();
