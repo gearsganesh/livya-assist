@@ -247,8 +247,16 @@ function billing(){
     '<section class="panel lower"><h2>Commission settlements</h2><div class="table"><table><thead><tr><th>HOSPITAL</th><th>QUARTER</th><th>VOLUME</th><th>RATE</th><th>GROSS</th><th>COMMISSION</th><th>COLLECTED</th></tr></thead><tbody>'+commissionSlabs().join('')+'</tbody></table></div></section>';
 }
 function commissionSlabs(){
-  const q=D.hospitals.map(async()=>null);
-  return D.hospitals.map(h=>'<tr><td>'+esc(h.name)+'</td><td>Current quarter</td><td>—</td><td>'+ (h.exclusivity_region?'25% / 30% / 35%':'25%') +'</td><td>—</td><td>—</td><td>—</td></tr>');
+  const now=new Date(),qStart=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1),converted=['ACCEPTED','TRAVEL_PLANNED','IN_TREATMENT','DISCHARGED','FOLLOW_UP','CLOSED'];
+  return D.hospitals.map(h=>{
+    const cs=D.cases.filter(c=>c.hospital_id===h.id&&converted.includes(c.status)&&new Date(c.updated_at||c.created_at)>=qStart);
+    const volume=new Set(cs.map(c=>c.patient_id)).size;
+    const rate=h.exclusivity_region?(volume>=11?35:volume>=6?30:25):25;
+    const gross=cs.reduce((sum,c)=>sum+Number(c.estimated_value||0),0);
+    const inv=D.billing.filter(b=>b.hospital_id===h.id&&b.type==='HOSPITAL_COMMISSION'&&b.status!=='VOID');
+    const commission=inv.reduce((sum,b)=>sum+Number(b.amount||0),0),collected=inv.reduce((sum,b)=>sum+Number(b.paid_amount||0),0);
+    return '<tr><td>'+esc(h.name)+'</td><td>Q'+(Math.floor(now.getMonth()/3)+1)+' '+now.getFullYear()+'</td><td>'+volume+'</td><td>'+rate+'%</td><td>'+money(gross)+'</td><td>'+money(commission)+'</td><td>'+money(collected)+'</td></tr>';
+  });
 }
 function newBilling(id=''){
   const x=D.billing.find(b=>b.id===id)||{};
