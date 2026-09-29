@@ -1059,3 +1059,15 @@ th{background:rgba(255,255,255,.16)}
   }
   .authcard .auth-brand{margin-bottom:28px!important}
 }
+
+
+/* Compact auth card */
+.authcard{padding:30px 36px 24px!important}
+.authcard .auth-brand{margin-bottom:24px!important}
+.authcard .auth-brand .livya-wordmark{font-size:44px}
+.authcard .auth-brand section{margin-top:7px!important}
+.authcard form label{margin-bottom:13px!important;gap:5px}
+.authcard form label>input,.password-field,.password-field input{height:44px!important;min-height:44px!important}
+.authcard form .primary{height:44px!important;min-height:44px!important;margin-top:0!important}
+.authcard>button:not(.primary){margin-top:4px}
+@media(max-width:720px){.authcard{padding:26px 24px 22px!important}.authcard .auth-brand{margin-bottom:22px!important}}
