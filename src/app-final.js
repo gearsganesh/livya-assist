@@ -10,7 +10,7 @@ const SESSION_MAX=3*60*60*1000, SESSION_KEY='livya_session_started_at:';
 const STAGES=['ENQUIRY','ASSESSMENT','QUOTATION','ACCEPTED','TRAVEL_PLANNED','IN_TREATMENT','DISCHARGED','FOLLOW_UP','CLOSED','CANCELLED'];
 const NAV=['Dashboard','Cases','Patients','Appointments','Concierge','Tasks','Billing','Hospitals','Referral network','Team & Centers'];
 const ROLES=['SUPER_ADMIN','CENTER_MANAGER','COORDINATOR','CONCIERGE_AGENT','HOSPITAL_USER','PATIENT'];
-const ROLE_LABELS={SUPER_ADMIN:'Super Admin',CENTER_MANAGER:'Center Manager',COORDINATOR:'Coordinator',CONCIERGE_AGENT:'Concierge Agent',HOSPITAL_USER:'Hospital User',PATIENT:'Patient'};
+const ROLE_LABELS={SUPER_ADMIN:'Super Admin',CENTER_MANAGER:'Center Manager',COORDINATOR:'Coordinator',CONCIERGE_AGENT:'Concierge Agent',HOSPITAL_USER:'Hospital User',PATIENT:'Client'};
 const TYPES=['CONSULTATION','TELEMEDICINE','PROCEDURE','ADMISSION','FOLLOW_UP','HEALTH_CHECK'];
 const APPT_STATUS=['SCHEDULED','CONFIRMED','COMPLETED','MISSED','CANCELLED'];
 const CONCIERGE_TYPES=['FLIGHT','HOTEL','AIRPORT_TRANSFER','LOCAL_TRANSPORT','TRANSLATOR','VISA_ASSIST','SIM_CARD','PHARMACY','HEALTH_CHECK','WELLNESS','ATTENDANT_SUPPORT','OTHER'];
@@ -664,18 +664,25 @@ async function patientAccount(id){
   const p=D.patients.find(x=>x.id===id);if(!p)return;
   const action=p.app_user_id?(p.portal_enabled?'disable':'enable'):'create';
   if(action==='create'){
-    const form=F('Login email','pae','email',p.email)+F('Password','pap','password')+
-      '<p class="login-help">If this email already has a LIVYA login, use <b>Link existing login</b> below.</p>'+
+    const form=F('Client email','pae','email',p.email)+F('Password (optional)','pap','password')+
+      '<p class="login-help">Enter a password to activate the client immediately. Leave it blank to create the account and send a password-reset email.</p>'+
       '<div class="modal-secondary"><button type="button" onclick="run(()=>managePatientAccount(\''+id+'\',\'link\'))">Link existing login</button></div>';
-    modal('Patient login',form,'managePatientAccount(\''+id+'\',\'create\')');
+    modal('Client login',form,'managePatientAccount(\''+id+'\',\'create\')');
     return;
   }
   const form='<p>'+esc(p.full_name)+'</p><button class="primary" onclick="run(()=>managePatientAccount(\''+id+'\',\''+action+'\'))">'+(action==='enable'?'Enable login':'Disable login')+'</button>';
-  modal('Patient login',form,'closeModal()');
+  modal('Client login',form,'closeModal()');
 }
 async function managePatientAccount(id,action){
   const body={action,patient_id:id};
-  if(action==='create'||action==='link'){body.email=$('pae').value.trim().toLowerCase();body.password=$('pap').value;if(body.password.length<8)return toast('Use an 8+ character password')}
+  if(action==='create'||action==='link'){
+    body.email=$('pae').value.trim().toLowerCase();
+    if(!body.email)return toast('Client email is required');
+    if(action==='create'){
+      body.password=$('pap').value;
+      if(body.password && body.password.length<8)return toast('Use an 8+ character password');
+    }
+  }
   const r=await supabase.functions.invoke('admin-patient-account',{body});
   if(r.error){
     let msg=r.data?.error||r.error.message;
@@ -683,7 +690,13 @@ async function managePatientAccount(id,action){
     throw new Error(msg);
   }
   if(r.data?.error)throw new Error(r.data.error);
-  closeModal();await refresh();toast('Patient login updated');
+  if(action==='create' && r.data?.requires_password_reset){
+    const reset=await supabase.auth.resetPasswordForEmail(body.email,{redirectTo:window.location.origin});
+    if(reset.error)throw reset.error;
+    closeModal();await refresh();toast('Client account created. Password setup email sent.');
+    return;
+  }
+  closeModal();await refresh();toast(action==='link'?'Client login linked':'Client login updated');
 }
 supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){clearTimeout(sessionTimer);S.user=S.staff=S.patient=null;render()}});
 Object.assign(window,{closeModal,run,go,render,login,logout,forgotPassword,newPatient,savePatient,newCase,saveCase,editPatient,editCase,openCase,moveCase,newAppointment,saveAppointment,editAppointment,newTask,saveTask,editTask,newConcierge,saveConcierge,editConcierge,newVendor,editVendor,saveVendor,newBilling,saveBilling,editBilling,recordPayment,savePayment,newHospital,editHospital,saveHospital,newReferrer,editReferrer,saveReferrer,newUser,editUser,saveUser,deleteUser,newCenter,saveCenter,deleteRecord,patientAccount,managePatientAccount,hospitalMoveCase,hospitalQuote,saveHospitalQuote,openDocument,patientNewConcierge,savePatientConcierge,patientProfile,savePatientProfile});
