@@ -1,0 +1,1 @@
+alter function public.ops_case_stage_allowed(text,text) set search_path = '';
