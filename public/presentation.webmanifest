@@ -1,0 +1,26 @@
+{
+  "id": "/presentation.html",
+  "name": "LIVYA Patient Coordination & Concierge",
+  "short_name": "LIVYA",
+  "description": "LIVYA patient coordination and concierge operations",
+  "start_url": "/presentation.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f4f2",
+  "theme_color": "#6f1315",
+  "icons": [
+    {
+      "src": "/icons/livya-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/livya-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

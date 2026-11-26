@@ -89,6 +89,14 @@ LIVYA is installable as a web app on supported iOS and Android browsers.
 - iOS `apple-touch-icon`
 - responsive staff, hospital and patient surfaces
 
+## Presentation prototype (temporary)
+
+A standalone, interactive prototype based on the supplied LIVYA OPS HTML reference is available at:
+
+- `/presentation.html` after deployment of the `prototype-enhancements` branch.
+
+This page uses its own seeded demo records and browser-local state. It does not read or write Supabase, and its sample accounts/data are for demonstrations only. Do not enter real patient information. The existing application remains available at the normal root route; the presentation prototype is isolated so the current app and production database are not disturbed.
+
 ## Build
 
 ```bash

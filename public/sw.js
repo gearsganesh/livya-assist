@@ -1,5 +1,5 @@
-const CACHE='livya-shell-v2';
-const CORE=['/','/index.html','/src/styles.css','/src/ui-fixes.css','/icons/livya-icon.svg','/icons/livya-icon.png'];
+const CACHE='livya-shell-v3';
+const CORE=['/','/index.html','/presentation.html','/manifest.webmanifest','/presentation.webmanifest','/src/styles.css','/src/ui-fixes.css','/icons/livya-icon.svg','/icons/livya-icon.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
