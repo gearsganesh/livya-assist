@@ -1,0 +1,90 @@
+/* LIVYA prototype visual system: shared shell, data surfaces and responsive layout */
+:root{
+  --lv-red:#941b20;--lv-red-dark:#7f151a;--lv-bg:#f6f4f2;--lv-panel:#fff;
+  --lv-text:#262323;--lv-muted:#77716f;--lv-border:#e8e3e0;--lv-shadow:0 2px 12px rgba(48,25,20,.055);
+}
+html,body{background:var(--lv-bg);color:var(--lv-text);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{font-size:14px}
+.app{background:var(--lv-bg)}
+aside{width:236px;background:linear-gradient(180deg,#971d22 0%,#85171c 100%);padding:24px 15px 18px;box-shadow:3px 0 18px rgba(45,10,10,.06)}
+.brand{padding:0 10px 30px;gap:11px}
+.brand>b{width:38px;height:38px;border-radius:10px;background:#fff;color:var(--lv-red);font-size:22px}
+.brand strong{font-size:19px;letter-spacing:.06em;font-weight:750}
+.brand small{font-size:10px;opacity:.82;letter-spacing:.025em}
+nav{gap:5px}
+nav button{min-height:42px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.94);transition:background .16s,transform .16s}
+nav button:hover{background:rgba(255,255,255,.12);transform:translateX(2px)}
+nav button.active{background:rgba(255,255,255,.19);box-shadow:inset 3px 0 #fff}
+footer{border-color:rgba(255,255,255,.2);padding:18px 10px 0}
+footer small{font-size:10px}
+footer button{background:#fff;color:var(--lv-red);border-radius:7px;font-weight:650}
+main{margin-left:236px;width:calc(100% - 236px);padding:0 32px 44px;min-width:0}
+header{height:76px;border-color:var(--lv-border)}
+header span{font-size:13px}
+header i{background:#c52a62}
+.head{padding:32px 0 22px;align-items:center}
+.head h1{font-size:27px;line-height:1.15;font-weight:750;letter-spacing:-.035em;color:#292323}
+.head p{font-size:12px;color:var(--lv-muted);margin-top:7px}
+.primary,.head .primary{background:var(--lv-red);color:#fff;border-radius:7px;padding:11px 17px;min-height:40px;font-size:13px;font-weight:700;box-shadow:0 2px 4px rgba(148,27,32,.12)}
+.primary:hover,.head .primary:hover{background:var(--lv-red-dark);transform:translateY(-1px)}
+.head select,.toolbar select,.toolbar input{height:41px;min-height:41px;border:1px solid var(--lv-border);border-radius:7px;background:#fff;font-size:13px;color:#383230}
+.toolbar{gap:10px;margin-bottom:14px}
+.toolbar input{padding:10px 13px}
+.toolbar input:focus,.toolbar select:focus,.dialog input:focus,.dialog select:focus{outline:2px solid rgba(148,27,32,.13);border-color:#bd777a}
+.cards{gap:14px}
+.cards button,.panel,.table,.lower{background:var(--lv-panel);border:1px solid var(--lv-border);border-radius:10px;box-shadow:var(--lv-shadow)}
+.cards button{padding:19px 20px;gap:9px;min-height:124px;transition:transform .16s,box-shadow .16s,border-color .16s}
+.cards button:hover{border-color:#d7b2b2;box-shadow:0 7px 20px rgba(48,25,20,.08);transform:translateY(-2px)}
+.cards small{font-size:10px;font-weight:700;letter-spacing:.075em;color:#817977}
+.cards b{font-size:26px;letter-spacing:-.035em;color:#2d2827}
+.cards span{font-size:11px;color:#817977}
+.two{gap:15px;margin-top:15px}
+.panel{padding:19px}
+.panel h2,.lower h2{font-size:15px;font-weight:750;color:#312b2a}
+.pipe{font-size:12px;padding:8px 0}
+.pipe i{height:7px;background:#f0ecea}
+.pipe em{background:var(--lv-red)}
+.row{padding:12px 0;border-color:#f0ecea}
+.row span,.row small{font-size:11px;color:var(--lv-muted)}
+.table{overflow:auto}
+table{font-size:12px}
+th{background:#faf8f7;color:#77706d;font-size:10px;letter-spacing:.055em;text-transform:uppercase;font-weight:700;padding:13px 14px;border-bottom:1px solid var(--lv-border)}
+td{padding:14px;border-bottom:1px solid #f0ecea;color:#393331;font-size:12px}
+tr:last-child td{border-bottom:0}
+td button,.modebar button{border:1px solid #e7e1de;border-radius:6px;background:#f8f6f5;padding:7px 10px;color:#4b4140;font-size:11px}
+td button:hover,.modebar button:hover{border-color:#d6b4b4;color:var(--lv-red)}
+.board{gap:12px}
+.board>section{background:#eeeae7;border:1px solid #e7e0dc;border-radius:10px;padding:10px}
+.board h3{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#665c59}
+.board article{border:1px solid #e9e3df;border-radius:8px;box-shadow:0 2px 6px rgba(40,25,20,.04);padding:12px}
+.dialog{border-radius:12px;box-shadow:0 18px 55px rgba(30,15,12,.18)}
+.dialog h2{font-size:19px;letter-spacing:-.02em}
+.dialog label{font-size:11px;font-weight:650;color:#655d59}
+.dialog input,.dialog select{border-color:#e5dfdc;border-radius:7px}
+.auth{background:radial-gradient(circle at 15% 15%,#fff 0,#f7f3f1 45%,#f0e9e6 100%)}
+.authcard{border:1px solid #e8e1de;border-radius:14px;box-shadow:0 18px 55px rgba(55,25,20,.09)}
+.authcard h1{letter-spacing:-.035em}
+#toast{border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15)}
+/* Case workspace and client/hospital portals share the same visual language. */
+.case-workspace-panel,.portal-card,.portal .panel{border-radius:12px}
+.case-workspace-panel{box-shadow:0 18px 60px rgba(30,15,12,.18)}
+@media(max-width:1000px){
+ aside{width:220px}main{margin-left:220px;width:calc(100% - 220px);padding-left:22px;padding-right:22px}
+ .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ aside{width:70px;padding:18px 8px}
+ .brand{padding:0 0 25px;justify-content:center}
+ .brand section,nav span,footer{display:none}
+ nav button{text-align:center;padding:10px 4px;font-size:0}
+ main{margin-left:70px;width:calc(100% - 70px);padding:0 14px 30px}
+ .head{align-items:flex-start;gap:12px;flex-direction:column}
+ .cards{grid-template-columns:1fr 1fr;gap:9px}
+ .cards button{padding:14px;min-height:108px}
+ .cards b{font-size:21px}
+ .two{grid-template-columns:1fr}
+ .toolbar{flex-wrap:wrap}
+ .toolbar input{flex:1 1 100%;width:100%}
+ .toolbar select{width:auto;flex:1}
+}
+@media(max-width:420px){.cards{grid-template-columns:1fr}}
