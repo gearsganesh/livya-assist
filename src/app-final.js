@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabase=createClient(
-  import.meta.env.VITE_SUPABASE_URL||'https://maewvwdjxdlcbwsrshlp.supabase.co',
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'sb_publishable__edgISlScMx7zmDT1wGVpA_1N788YwM',
+  import.meta.env.VITE_SUPABASE_URL||'https://jvuwgfqywrildzkxgpfp.supabase.co',
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY||'sb_publishable_9itH2NCXKnhaWuJmFgOmcw_vXUOUsrt',
   {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}
 );
 
